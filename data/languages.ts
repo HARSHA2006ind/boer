@@ -1,0 +1,23 @@
+export interface LanguageOption { code: string; name: string }
+export const LANGUAGES: LanguageOption[] = [
+  { code: 'en', name: 'English' },
+  { code: 'ta', name: 'Tamil (தமிழ்)' },
+  { code: 'hi', name: 'Hindi (हिन्दी)' },
+  { code: 'te', name: 'Telugu (తెలుగు)' },
+  { code: 'kn', name: 'Kannada (ಕನ್ನಡ)' },
+  { code: 'ml', name: 'Malayalam (മലയാളം)' },
+  { code: 'bn', name: 'Bengali (বাংলা)' },
+  { code: 'mr', name: 'Marathi (मराठी)' },
+  { code: 'gu', name: 'Gujarati (ગુજરાતી)' },
+  { code: 'pa', name: 'Punjabi (ਪੰਜਾਬੀ)' },
+  { code: 'or', name: 'Odia (ଓଡ଼ିଆ)' },
+  { code: 'as', name: 'Assamese (অসমীয়া)' },
+  { code: 'ur', name: 'Urdu (اردو)' },
+  { code: 'sd', name: 'Sindhi (سنڌي)' },
+  { code: 'ks', name: 'Kashmiri (कॉशुर)' },
+  { code: 'ne', name: 'Nepali (नेपाली)' },
+  { code: 'si', name: 'Sinhala (සිංහල)' },
+  { code: 'es', name: 'Spanish' },
+  { code: 'fr', name: 'French' },
+  { code: 'ar', name: 'Arabic (العربية)' },
+];
