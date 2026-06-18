@@ -1,3 +1,9 @@
+import 'react-native-gesture-handler';
+import { registerRootComponent } from 'expo';
+import App from './App';
+
+registerRootComponent(App);
+
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
@@ -74,6 +80,7 @@ export interface Crop {
   season: string;
   area_allocated: number;
   area_unit: string;
+  growth_stage: string;
   notes: string;
   created_at: string;
   updated_at: string;

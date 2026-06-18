@@ -1,89 +1,89 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
 import { signOut } from '../services/authService';
-import { colors, spacing, radius } from '../theme';
-import Card from '../components/Card';
-import Button from '../components/Button';
+import { colors, spacing, radius, shadows } from '../theme';
 
 interface Props { navigation: any }
 
+const SETTINGS = [
+  { icon: 'person-outline', label: 'Edit Profile', color: '#3B82F6', screen: 'ProfileEdit' },
+  { icon: 'notifications-outline', label: 'Notifications', color: '#F59E0B' },
+  { icon: 'language-outline', label: 'Language', color: colors.primary },
+  { icon: 'lock-closed-outline', label: 'Privacy', color: '#6B7280' },
+  { icon: 'document-text-outline', label: 'Terms & Conditions', color: '#8B5CF6' },
+  { icon: 'help-circle-outline', label: 'Support', color: '#3BA55D' },
+  { icon: 'chatbubble-outline', label: 'Feedback', color: '#EC4899' },
+];
+
 export default function ProfileScreen({ navigation }: Props) {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
+  const m = user?.user_metadata || {};
 
   const handleLogout = () => {
-    Alert.alert(t('profile.logout'), 'Are you sure?', [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.delete'), style: 'destructive', onPress: async () => { setLoading(true); try { await signOut(); } catch (err: any) { Alert.alert('Error', err.message); } finally { setLoading(false); } } },
+    Alert.alert('Logout', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Logout', style: 'destructive', onPress: async () => { setLoading(true); try { await signOut(); } catch {} finally { setLoading(false); } } },
     ]);
   };
 
-  const m = user?.user_metadata || {};
-  const createdAt = user?.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <LinearGradient colors={['#4A6B12', '#6B8E23']} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{(m.full_name || 'U').charAt(0).toUpperCase()}</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 90 }]} showsVerticalScrollIndicator={false}>
+        {/* Profile Header */}
+        <View style={styles.profileCard}>
+          <View style={styles.avatarWrap}>
+            <Ionicons name="person-circle" size={72} color={colors.primary} />
+          </View>
+          <Text style={styles.name}>{m.full_name || 'Farmer'}</Text>
+          <Text style={styles.email}>{user?.email || ''}</Text>
         </View>
-        <Text style={styles.name}>{m.full_name || 'User'}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-      </LinearGradient>
 
-      <Card title={t('profile.account')}>
-        <DetailRow label={t('profile.fullName')} value={m.full_name} />
-        <DetailRow label={t('profile.mobile')} value={m.mobile_number} />
-        <DetailRow label={t('profile.email')} value={user?.email} />
-        <DetailRow label={t('profile.language')} value={m.preferred_language} />
-        <DetailRow label={t('farm.country')} value={m.country} />
-        <DetailRow label={t('farm.state')} value={m.state} />
-        <DetailRow label={t('farm.district')} value={m.district} />
-        <DetailRow label={t('farm.village')} value={m.village} />
-        <DetailRow label={t('profile.memberSince')} value={createdAt} />
-      </Card>
+        {/* Settings List */}
+        <View style={styles.settingsCard}>
+          {SETTINGS.map((item, i) => (
+            <TouchableOpacity key={i} style={[styles.row, i < SETTINGS.length - 1 && styles.rowBorder]}
+              onPress={() => { if (item.screen) navigation.navigate(item.screen); }}>
+              <View style={[styles.rowIcon, { backgroundColor: item.color + '15' }]}>
+                <Ionicons name={item.icon as any} size={20} color={item.color} />
+              </View>
+              <Text style={styles.rowLabel}>{item.label}</Text>
+              <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <View style={styles.actions}>
-        <Button title={`✏️ ${t('profile.edit')}`} onPress={() => navigation.navigate('ProfileEdit')} />
-        <Button title={`🚪 ${t('profile.logout')}`} variant="outline" onPress={handleLogout} loading={loading} />
-      </View>
+        {/* Logout */}
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} disabled={loading}>
+          <Ionicons name="log-out-outline" size={18} color={colors.danger} />
+          <Text style={styles.logoutText}>{loading ? 'Logging out...' : 'Logout'}</Text>
+        </TouchableOpacity>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerHeart}>❤️</Text>
-        <Text style={styles.footerText}>{t('profile.developedFor')}</Text>
-        <Text style={styles.footerAuthor}>{t('profile.by')} Harsha Vardhan</Text>
-      </View>
-    </ScrollView>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value?: string | null }) {
-  return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value || '—'}</Text>
+        <Text style={styles.footer}>Boer v1.0 · Made for Farmers</Text>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { paddingBottom: spacing.xxl },
-  hero: { alignItems: 'center', padding: spacing.xl, paddingTop: spacing.xxl },
-  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md, borderWidth: 3, borderColor: 'rgba(255,255,255,0.3)' },
-  avatarText: { fontSize: 32, fontWeight: '700', color: '#FFFFFF' },
-  name: { fontSize: 24, fontWeight: '700', color: '#FFFFFF' },
-  email: { fontSize: 14, color: 'rgba(255,255,255,0.7)', marginTop: spacing.xs },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
-  rowLabel: { fontSize: 14, color: colors.textSecondary },
-  rowValue: { fontSize: 14, color: colors.text, fontWeight: '500', maxWidth: '60%', textAlign: 'right' },
-  actions: { padding: spacing.md, gap: spacing.sm },
-  footer: { alignItems: 'center', paddingVertical: spacing.xl, borderTopWidth: 1, borderTopColor: colors.border, marginTop: spacing.md, marginHorizontal: spacing.md },
-  footerHeart: { fontSize: 20, marginBottom: spacing.sm },
-  footerText: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
-  footerAuthor: { fontSize: 13, color: colors.textLight, marginTop: 2 },
+  content: { padding: spacing.md },
+  profileCard: { alignItems: 'center', paddingVertical: spacing.xl, marginBottom: spacing.lg },
+  avatarWrap: { marginBottom: spacing.md },
+  name: { fontSize: 24, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
+  email: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  settingsCard: { backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', marginBottom: spacing.xl, ...shadows.sm },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md + 2, paddingHorizontal: spacing.md },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  rowIcon: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center', marginRight: spacing.md },
+  rowLabel: { flex: 1, fontSize: 15, color: colors.text, fontWeight: '600' },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.md, borderRadius: radius.xl, borderWidth: 1, borderColor: '#FEE2E2', marginBottom: spacing.xl },
+  logoutText: { fontSize: 15, color: colors.danger, fontWeight: '700' },
+  footer: { textAlign: 'center', fontSize: 11, color: colors.textLight, marginBottom: spacing.md },
 });

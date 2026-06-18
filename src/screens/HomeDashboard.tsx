@@ -1,252 +1,266 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, FlatList, Dimensions, Animated } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../i18n/LanguageContext';
 import { supabase } from '../services/supabase';
-import { Farm } from '../types';
-import { getExpenses } from '../services/expenseService';
-import { getIncomeRecords } from '../services/incomeService';
-import { colors, spacing, radius, shadows } from '../theme';
-import WeatherWidget from '../components/WeatherWidget';
-import FarmCard from '../components/FarmCard';
-import AICard from '../components/AICard';
-import Loading from '../components/Loading';
+import { Farm, IncomeRecord, Expense } from '../types';
+import { useWeather } from '../hooks/useWeather';
+import { useLanguage } from '../i18n/LanguageContext';
+import WeatherHero from '../components/WeatherHero';
+import AlertsSection, { HomeAlert } from '../components/AlertsSection';
+import TodayPlanCard, { PlanTask } from '../components/TodayPlanCard';
+import FinanceSnapshotCard from '../components/FinanceSnapshotCard';
+import { spacing } from '../theme';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const TAB_BAR_HEIGHT = 68;
 
-const REMINDERS = [
-  { icon: '🌱', textKey: 'reminder.water', gradient: ['#4A6B12', '#6B8E23'] as const },
-  { icon: '🌾', textKey: 'reminder.harvest', gradient: ['#D4A843', '#E8B84A'] as const },
-  { icon: '⚠️', textKey: 'reminder.rain', gradient: ['#3B82F6', '#60A5FA'] as const },
-  { icon: '💧', textKey: 'reminder.irrigation', gradient: ['#0891B2', '#22D3EE'] as const },
-  { icon: '🧪', textKey: 'reminder.fertilizer', gradient: ['#7C3AED', '#A78BFA'] as const },
-];
-
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'morning';
-  if (h < 17) return 'afternoon';
-  return 'evening';
+function getCurrentMonth() {
+  return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
-function AnimatedCard({ children, index }: { children: React.ReactNode; index: number }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(30)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 500, delay: index * 100, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 400, delay: index * 100, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  return (
-    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
-      {children}
-    </Animated.View>
-  );
+interface Props {
+  navigation: any;
 }
-
-interface Props { navigation: any }
 
 export default function HomeDashboard({ navigation }: Props) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const [farms, setFarms] = useState<Farm[]>([]);
-  const [totalExpenses, setTotalExpenses] = useState(0);
-  const [totalIncome, setTotalIncome] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchAll = useCallback(async () => {
+  const defaultFarm = farms[0];
+  const weatherLocation = defaultFarm
+    ? [defaultFarm.village, defaultFarm.district, defaultFarm.state].filter(Boolean).join(', ')
+    : null;
+  const { weather } = useWeather(weatherLocation || undefined, defaultFarm?.name);
+
+  const fetchData = useCallback(async () => {
     if (!user) return;
     try {
-      const [farmResult, expData, incData] = await Promise.all([
+      const [farmRes, incomeRes, expenseRes] = await Promise.all([
         supabase.from('farms').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        getExpenses(),
-        getIncomeRecords(),
+        supabase.from('income_records').select('*').eq('user_id', user.id).order('income_date', { ascending: false }),
+        supabase.from('expenses').select('*').eq('user_id', user.id).order('expense_date', { ascending: false }),
       ]);
-      if (farmResult.data) setFarms(farmResult.data);
-      setTotalExpenses(expData.reduce((s, e) => s + (e.amount || 0), 0));
-      setTotalIncome(incData.reduce((s, i) => s + (i.amount || 0), 0));
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); setRefreshing(false); }
+      if (farmRes.data) setFarms(farmRes.data);
+      if (incomeRes.data) setIncomes(incomeRes.data);
+      if (expenseRes.data) setExpenses(expenseRes.data);
+    } catch {
+    } finally {
+      setRefreshing(false);
+    }
   }, [user]);
 
-  useEffect(() => { fetchAll(); }, [fetchAll]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  const m = user?.user_metadata || {};
-  const name = m.full_name || 'Farmer';
-  const location = [m.village, m.district, m.state].filter(Boolean).join(', ') || 'Your Farm';
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const greeting = getGreeting();
-  const greetingKey = `home.greeting.${greeting}` as const;
-  const iconKey = `home.greeting.icon.${greeting}` as const;
-  const reminder = REMINDERS[new Date().getDate() % REMINDERS.length];
+  useEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
-  const avatarLetter = (name.charAt(0) || 'F').toUpperCase();
+  const monthIncomes = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    return incomes
+      .filter((i) => i.income_date >= start)
+      .reduce((sum, i) => sum + (i.amount || 0), 0);
+  }, [incomes]);
 
-  if (loading) return <Loading fullScreen />;
+  const monthExpenses = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    return expenses
+      .filter((e) => e.expense_date >= start)
+      .reduce((sum, e) => sum + (e.amount || 0), 0);
+  }, [expenses]);
+
+  const monthProfit = monthIncomes - monthExpenses;
+
+  const alerts: HomeAlert[] = useMemo(() => {
+    const list: HomeAlert[] = [];
+    const h = new Date().getHours();
+    const isDay = h >= 6 && h < 18;
+    const temp = weather.temperature || 30;
+    const cond = (weather.condition || '').toLowerCase();
+    if (temp > 38) {
+      list.push({
+        id: 'heat',
+        type: 'heat_wave',
+        title: 'Heat Wave Warning',
+        description: `Temperature ${temp}°C — take precautions`,
+        severity: 'high',
+      });
+    }
+    if (cond.includes('rain') || cond.includes('thunder')) {
+      list.push({
+        id: 'rain',
+        type: 'heavy_rain',
+        title: 'Heavy Rain Expected',
+        description: 'Prepare drainage and delay irrigation',
+        severity: 'critical',
+      });
+    }
+    if (cond.includes('fog') || cond.includes('mist')) {
+      list.push({
+        id: 'fog',
+        type: 'fog',
+        title: 'Dense Fog Alert',
+        description: 'Low visibility — drive carefully',
+        severity: 'medium',
+      });
+    }
+    if (isDay && temp > 35) {
+      list.push({
+        id: 'sun_alert',
+        type: 'heat',
+        title: 'High UV Index',
+        description: 'Use shade nets for sensitive crops',
+        severity: 'medium',
+      });
+    }
+    return list;
+  }, [weather]);
+
+  const tasks: PlanTask[] = useMemo(() => {
+    const list: PlanTask[] = [];
+    if (tempCropNeedsIrrigation(weather)) {
+      list.push({ id: 'irrigation', title: t('reminder.water'), completed: false });
+    }
+    list.push({ id: 'fertilizer', title: t('reminder.fertilizer'), completed: false });
+    list.push({ id: 'inspection', title: t('reminder.cropInspection'), completed: false });
+    if (monthExpenses === 0) {
+      list.push({ id: 'finance', title: 'Record monthly expenses', completed: false });
+    }
+    return list.slice(0, 4);
+  }, [weather, monthExpenses, t]);
 
   return (
-    <ScrollView
-      style={styles.container} contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAll(); }} tintColor={colors.primary} />}
-      showsVerticalScrollIndicator={false}
-    >
-      <AnimatedCard index={0}>
-        <View style={styles.greetingRow}>
-          <View style={styles.greetingLeft}>
-            <Text style={styles.greetingText}>{t(greetingKey)} {t(iconKey)}</Text>
-            <Text style={styles.farmerName}>{name}</Text>
-            <Text style={styles.dateLocation}>{today} • {location}</Text>
+    <View style={styles.wrapper}>
+      <Animated.ScrollView
+        entering={FadeInDown.duration(600)}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.scrollInner,
+          { paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.lg },
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); fetchData(); }}
+            tintColor="#1E6F50"
+          />
+        }
+      >
+        {/* Header */}
+        <Animated.View
+          entering={FadeInDown.duration(500).delay(100)}
+          style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}
+        >
+          <View>
+            <Text style={styles.greeting}>
+              Boer
+            </Text>
+            <Text style={styles.greetingSub}>
+              Smart Farming App
+            </Text>
           </View>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{avatarLetter}</Text>
-          </View>
-        </View>
-      </AnimatedCard>
+          <TouchableOpacity
+            style={styles.profileBtn}
+            onPress={() => navigation.navigate('Profile')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="person-circle-outline" size={28} color="#1E6F50" />
+          </TouchableOpacity>
+        </Animated.View>
 
-      <AnimatedCard index={1}>
-        <WeatherWidget location={location} />
-      </AnimatedCard>
+        {/* Section 1: Weather Hero */}
+        <Animated.View entering={FadeInDown.duration(500).delay(150)}>
+          <WeatherHero
+            temperature={weather.temperature || 30}
+            condition={weather.condition || 'Sunny'}
+            location={weather.location || ''}
+            humidity={weather.humidity || 65}
+            windSpeed={weather.windSpeed || 12}
+            rainChance={weather.rainChance || 10}
+            sunrise={weather.sunrise || '6:15 AM'}
+            sunset={weather.sunset || '6:45 PM'}
+            isDay={weather.isDay ?? true}
+            forecast={weather.forecast || []}
+          />
+        </Animated.View>
 
-      <AnimatedCard index={2}>
-        <LinearGradient colors={reminder.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.reminderCard}>
-          <Text style={styles.reminderIcon}>{reminder.icon}</Text>
-          <View style={styles.reminderTextBlock}>
-            <Text style={styles.reminderLabel}>{t('home.smartReminder')}</Text>
-            <Text style={styles.reminderText}>{t(reminder.textKey)}</Text>
-          </View>
-        </LinearGradient>
-      </AnimatedCard>
+        {/* Section 2: Alerts */}
+        <AlertsSection
+          alerts={alerts}
+          onViewAll={() => navigation.navigate('Ecosystem', { screen: 'AlertsTab' })}
+        />
 
-      <AnimatedCard index={3}>
-        <View style={styles.quickGrid}>
-          <QuickActionTile icon="🌾" label={t('home.farms')} color="#4A6B12" onPress={() => navigation.navigate('Farms', { screen: 'FarmList' })} />
-          <QuickActionTile icon="📒" label={t('home.cropDiary')} color="#D4A843" onPress={() => navigation.navigate('Farms', { screen: 'FarmList' })} />
-          <QuickActionTile icon="💰" label={t('home.finance')} color="#2E7D32" onPress={() => navigation.navigate('Finance', { screen: 'FinanceDashboard' })} />
-          <QuickActionTile icon="🤖" label={t('home.aiAssistant')} color="#4338CA" onPress={() => navigation.navigate('AI', { screen: 'AIChat' })} />
-        </View>
-      </AnimatedCard>
+        {/* Section 3: Today's Plan */}
+        <TodayPlanCard
+          tasks={tasks}
+          onViewFull={() => navigation.navigate('Farms')}
+        />
 
-      <AnimatedCard index={4}>
-        <AICard onPress={() => navigation.navigate('AI', { screen: 'AIChat' })} />
-      </AnimatedCard>
-
-      {farms.length > 0 && (
-        <AnimatedCard index={5}>
-          <View style={styles.farmSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t('home.myFarms')}</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Farms', { screen: 'FarmList' })}>
-                <Text style={styles.seeAll}>{t('home.seeAll')}</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={farms}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={f => f.id}
-              contentContainerStyle={styles.farmScroll}
-              renderItem={({ item }) => (
-                <View style={styles.farmCardWrap}>
-                  <FarmCard
-                    name={item.name}
-                    village={item.village}
-                    landArea={`${item.land_area_value || ''} ${item.land_area_unit || ''}`.trim()}
-                    soilType={item.soil_type}
-                    currentCrop={item.current_crop}
-                    aiActive
-                    onPress={() => navigation.navigate('Farms', { screen: 'FarmDetail', params: { farmId: item.id } })}
-                  />
-                </View>
-              )}
-            />
-          </View>
-        </AnimatedCard>
-      )}
-
-      {farms.length === 0 && (
-        <AnimatedCard index={5}>
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🌱</Text>
-            <Text style={styles.emptyTitle}>{t('home.noFarms.title')}</Text>
-            <Text style={styles.emptyText}>{t('home.noFarms.text')}</Text>
-            <TouchableOpacity style={styles.emptyBtn} onPress={() => navigation.navigate('Farms', { screen: 'AddEditFarm' })}>
-              <Text style={styles.emptyBtnText}>{t('home.noFarms.action')}</Text>
-            </TouchableOpacity>
-          </View>
-        </AnimatedCard>
-      )}
-    </ScrollView>
+        {/* Section 4: Finance Snapshot */}
+        <FinanceSnapshotCard
+          revenue={monthIncomes}
+          expenses={monthExpenses}
+          profit={monthProfit}
+          month={getCurrentMonth()}
+          onViewDetails={() => navigation.navigate('Finance')}
+        />
+      </Animated.ScrollView>
+    </View>
   );
 }
 
-function QuickActionTile({ icon, label, color, onPress }: { icon: string; label: string; color: string; onPress: () => void }) {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  return (
-    <TouchableOpacity
-      style={styles.quickTile}
-      onPress={onPress}
-      activeOpacity={0.85}
-      onPressIn={() => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true, friction: 8 }).start()}
-      onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 8 }).start()}
-    >
-      <Animated.View style={{ transform: [{ scale }], alignItems: 'center' }}>
-        <View style={[styles.quickTileIcon, { backgroundColor: color + '18' }]}>
-          <Text style={styles.quickTileEmoji}>{icon}</Text>
-        </View>
-        <Text style={styles.quickTileLabel}>{label}</Text>
-      </Animated.View>
-    </TouchableOpacity>
-  );
+function tempCropNeedsIrrigation(weather: any): boolean {
+  const h = new Date().getHours();
+  const isDay = h >= 6 && h < 18;
+  const temp = weather.temperature || 30;
+  const rain = weather.rainChance || 0;
+  if (!isDay) return false;
+  if (rain > 60) return false;
+  if (temp > 32) return true;
+  return false;
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.md, paddingBottom: spacing.xxl + 60 },
-  greetingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.md, marginTop: spacing.sm },
-  greetingLeft: { flex: 1 },
-  greetingText: { fontSize: 16, color: colors.textSecondary, fontWeight: '500' },
-  farmerName: { fontSize: 26, fontWeight: '800', color: colors.text, marginTop: 2 },
-  dateLocation: { fontSize: 12, color: colors.textLight, marginTop: 4 },
-  avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  avatarText: { fontSize: 20, fontWeight: '700', color: '#FFFFFF' },
-  reminderCard: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: radius.xl, padding: spacing.md,
-    marginBottom: spacing.md, ...shadows.md,
+  wrapper: {
+    flex: 1,
+    backgroundColor: '#F7F8F6',
   },
-  reminderIcon: { fontSize: 32, marginRight: spacing.md },
-  reminderTextBlock: { flex: 1 },
-  reminderLabel: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.7)', marginBottom: 2 },
-  reminderText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
-  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
-  quickTile: {
-    width: (SCREEN_WIDTH - spacing.md * 2 - spacing.sm) / 2,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
+  scrollInner: {
+    paddingHorizontal: spacing.md,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  greeting: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    letterSpacing: -0.3,
+  },
+  greetingSub: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  profileBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0F1EF',
+    justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadows.sm,
   },
-  quickTileIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm },
-  quickTileEmoji: { fontSize: 24 },
-  quickTileLabel: { fontSize: 14, fontWeight: '600', color: colors.text },
-  farmSection: {},
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
-  seeAll: { fontSize: 13, fontWeight: '600', color: colors.primary },
-  farmScroll: { paddingRight: spacing.md },
-  farmCardWrap: { width: SCREEN_WIDTH * 0.7, marginRight: spacing.sm },
-  emptyState: { alignItems: 'center', paddingVertical: spacing.xl, marginTop: spacing.sm },
-  emptyIcon: { fontSize: 64, marginBottom: spacing.md },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
-  emptyText: { fontSize: 14, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.lg, paddingHorizontal: spacing.xl },
-  emptyBtn: { backgroundColor: colors.primary, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, borderRadius: radius.pill },
-  emptyBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
 });

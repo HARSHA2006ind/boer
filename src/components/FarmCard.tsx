@@ -1,5 +1,5 @@
-import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useRef, useEffect } from 'react';
+import { TouchableOpacity, View, Text, StyleSheet, Animated } from 'react-native';
 import { colors, radius, spacing, shadows } from '../theme';
 
 interface Props {
@@ -13,48 +13,58 @@ interface Props {
   onPress: () => void;
 }
 
-export default function FarmCard({ name, village, landArea, soilType, currentCrop, weatherStatus, aiActive, onPress }: Props) {
+export default function FarmCard({ name, village, currentCrop, landArea, weatherStatus, aiActive, onPress }: Props) {
+  const scale = useRef(new Animated.Value(1)).current;
+
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={styles.container}>
-      <LinearGradient colors={['#4A6B12', '#6B8E23', '#8FB848']} style={styles.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-      <View style={styles.overlay}>
-        <View style={styles.topRow}>
-          <View style={styles.badgeRow}>
-            {soilType && <View style={styles.badge}><Text style={styles.badgeText}>{soilType}</Text></View>}
-            {weatherStatus && <View style={styles.badge}><Text style={styles.badgeText}>{weatherStatus}</Text></View>}
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      onPressIn={() => Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, friction: 8 }).start()}
+      onPressOut={() => Animated.spring(scale, { toValue: 1, useNativeDriver: true, friction: 8 }).start()}
+    >
+      <Animated.View style={[styles.container, { transform: [{ scale }] }]}>
+        <View style={styles.topBar}>
+          <View style={styles.weatherBadge}>
+            <Text style={styles.weatherText}>{weatherStatus || '☀️'}</Text>
           </View>
           {aiActive && (
             <View style={styles.aiBadge}>
-              <Text style={styles.aiText}>🤖 Active</Text>
+              <Text style={styles.aiText}>AI</Text>
             </View>
           )}
         </View>
         <View style={styles.info}>
-          <Text style={styles.name}>{name}</Text>
-          <Text style={styles.location}>{village}</Text>
-          <View style={styles.metaRow}>
-            {landArea && <Text style={styles.meta}>{landArea}</Text>}
-            {currentCrop && <Text style={styles.meta}>• {currentCrop}</Text>}
+          <Text style={styles.name} numberOfLines={1}>{name}</Text>
+          <Text style={styles.village} numberOfLines={1}>{village}</Text>
+          <View style={styles.bottomRow}>
+            {currentCrop && (
+              <View style={styles.cropRow}>
+                <Text style={styles.cropEmoji}>🌾</Text>
+                <Text style={styles.cropText} numberOfLines={1}>{currentCrop}</Text>
+              </View>
+            )}
+            {landArea && <Text style={styles.area}>{landArea}</Text>}
           </View>
         </View>
-      </View>
+      </Animated.View>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { borderRadius: radius.lg, overflow: 'hidden', height: 190, marginBottom: spacing.md, ...shadows.lg },
-  gradient: { ...StyleSheet.absoluteFillObject },
-  overlay: { flex: 1, justifyContent: 'space-between', padding: spacing.md, backgroundColor: 'rgba(0,0,0,0.25)' },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  badgeRow: { flexDirection: 'row', gap: spacing.xs, flex: 1, flexWrap: 'wrap' },
-  badge: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: spacing.sm + 2, paddingVertical: spacing.xs, borderRadius: radius.pill },
-  badgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '600' },
-  aiBadge: { backgroundColor: 'rgba(67,56,202,0.7)', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.pill },
-  aiText: { color: '#FFFFFF', fontSize: 11, fontWeight: '600' },
-  info: {},
-  name: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 2 },
-  location: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
-  metaRow: { flexDirection: 'row', gap: spacing.xs },
-  meta: { fontSize: 12, color: 'rgba(255,255,255,0.7)' },
+  container: { borderRadius: radius.lg, overflow: 'hidden', height: 120, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, ...shadows.md },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.sm + 2, paddingTop: spacing.xs + 2 },
+  weatherBadge: { backgroundColor: '#F5F0E8', borderRadius: radius.pill, paddingHorizontal: 6, paddingVertical: 1 },
+  weatherText: { fontSize: 14 },
+  aiBadge: { backgroundColor: colors.primaryDark, borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 2 },
+  aiText: { fontSize: 9, fontWeight: '800', color: '#FFFFFF' },
+  info: { flex: 1, paddingHorizontal: spacing.sm + 2, justifyContent: 'flex-end', paddingBottom: spacing.sm + 2 },
+  name: { fontSize: 15, fontWeight: '800', color: colors.text, marginBottom: 1 },
+  village: { fontSize: 11, color: colors.textSecondary, fontWeight: '500', marginBottom: spacing.xs + 2 },
+  bottomRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cropRow: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  cropEmoji: { fontSize: 10 },
+  cropText: { fontSize: 11, color: colors.primaryDark, fontWeight: '700' },
+  area: { fontSize: 10, color: colors.textLight, fontWeight: '600' },
 });

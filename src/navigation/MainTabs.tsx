@@ -1,14 +1,16 @@
 import { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MainTabParamList } from '../types';
 import HomeDashboard from '../screens/HomeDashboard';
 import FarmStack from './FarmStack';
 import FinanceStack from './FinanceStack';
 import AIStack from './AIStack';
-import ProfileStack from './ProfileStack';
+import EcosystemStack from './EcosystemStack';
 import { colors, radius, spacing, shadows } from '../theme';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -19,83 +21,91 @@ const TAB_ICONS: Record<string, { active: IconName; inactive: IconName }> = {
   Farms: { active: 'leaf', inactive: 'leaf-outline' },
   Finance: { active: 'wallet', inactive: 'wallet-outline' },
   AI: { active: 'sparkles', inactive: 'sparkles-outline' },
-  Profile: { active: 'person', inactive: 'person-outline' },
+  Ecosystem: { active: 'planet', inactive: 'planet-outline' },
 };
 
-function TabButton({ icon, label, focused, onPress }: { icon: IconName; label: string; focused: boolean; onPress: () => void }) {
+const TAB_KEYS: Record<string, string> = {
+  Home: 'nav.home',
+  Farms: 'nav.farms',
+  Finance: 'nav.finance',
+  AI: 'nav.ai',
+  Ecosystem: 'nav.ecosystem',
+};
+
+function TabButton({ routeName, focused, onPress }: { routeName: string; focused: boolean; onPress: (e: any) => void }) {
   const scale = useRef(new Animated.Value(1)).current;
+  const { t } = useLanguage();
+  const icons = TAB_ICONS[routeName] || { active: 'ellipse', inactive: 'ellipse-outline' };
 
   useEffect(() => {
     Animated.spring(scale, {
-      toValue: focused ? 1.15 : 1,
-      useNativeDriver: true,
-      friction: 6,
-      tension: 100,
+      toValue: focused ? 1 : 0.92, useNativeDriver: true, friction: 8, tension: 80,
     }).start();
   }, [focused]);
+
+  const labelKey = TAB_KEYS[routeName] || routeName;
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={tStyles.item}>
       <Animated.View style={[tStyles.iconWrap, focused && tStyles.iconWrapActive, { transform: [{ scale }] }]}>
-        <Ionicons name={focused ? icon : icon.replace('-outline', '-outline') as any} size={22} color={focused ? colors.primary : colors.textLight} />
+        <Ionicons name={focused ? icons.active : icons.inactive} size={20} color={focused ? '#FFFFFF' : colors.textSecondary} />
       </Animated.View>
-      <Text style={[tStyles.label, focused && tStyles.labelActive]}>{label}</Text>
+      <Text style={[tStyles.label, focused && tStyles.labelActive]}>{t(labelKey)}</Text>
     </TouchableOpacity>
   );
 }
 
 const tStyles = StyleSheet.create({
   item: { alignItems: 'center', justifyContent: 'center', flex: 1, paddingTop: 6 },
-  iconWrap: { width: 40, height: 26, borderRadius: 13, justifyContent: 'center', alignItems: 'center' },
-  iconWrapActive: { backgroundColor: 'rgba(107,142,35,0.12)' },
-  label: { fontSize: 10, fontWeight: '500', color: colors.textLight, marginTop: 3, textAlign: 'center' },
-  labelActive: { color: colors.primary, fontWeight: '700' },
+  iconWrap: { width: 36, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  iconWrapActive: { backgroundColor: colors.primary },
+  label: { fontSize: 9, fontWeight: '600', color: colors.textLight, marginTop: 2, textAlign: 'center' },
+  labelActive: { color: colors.primary, fontWeight: '800' },
 });
 
 export default function MainTabs() {
-  const renderTabIcon = (routeName: string, focused: boolean) => {
-    const icons = TAB_ICONS[routeName];
-    if (!icons) return null;
-    const ico = focused ? icons.active : icons.inactive;
-    return <Ionicons name={ico} size={22} color={focused ? colors.primary : colors.textLight} />;
-  };
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 4 : 8);
 
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarStyle: tabBarStyles.container,
-        tabBarShowLabel: true,
-        tabBarLabelStyle: tabBarStyles.label,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textLight,
-        tabBarIcon: ({ focused }) => renderTabIcon(route.name, focused),
-        tabBarLabel: route.name === 'AI' ? 'AI' : route.name,
-        tabBarHideOnKeyboard: true,
-      })}
-    >
-      <Tab.Screen name="Home" component={HomeDashboard} />
-      <Tab.Screen name="Farms" component={FarmStack} />
-      <Tab.Screen name="Finance" component={FinanceStack} />
-      <Tab.Screen name="AI" component={AIStack} />
-      <Tab.Screen name="Profile" component={ProfileStack} />
-    </Tab.Navigator>
+    <View style={{ flex: 1 }}>
+      <Tab.Navigator
+        screenOptions={({ route }) => ({
+          headerShown: false,
+          tabBarStyle: {
+            ...tabBarStyles.container,
+            bottom: bottomInset + spacing.sm,
+          },
+          tabBarShowLabel: false,
+          tabBarHideOnKeyboard: true,
+          tabBarButton: ({ onPress, accessibilityState }) => (
+            <TabButton routeName={route.name} focused={accessibilityState?.selected || false} onPress={onPress || (() => {})} />
+          ),
+        })}
+      >
+        <Tab.Screen name="Home" component={HomeDashboard} />
+        <Tab.Screen name="Farms" component={FarmStack} />
+        <Tab.Screen name="Finance" component={FinanceStack} />
+        <Tab.Screen name="AI" component={AIStack} />
+        <Tab.Screen name="Ecosystem" component={EcosystemStack} />
+      </Tab.Navigator>
+    </View>
   );
 }
 
 const tabBarStyles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: spacing.md,
-    left: spacing.md,
-    right: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.xl,
-    height: 64,
-    paddingBottom: spacing.xs,
+    left: spacing.lg,
+    right: spacing.lg,
+    backgroundColor: '#FDFCF8',
+    borderRadius: radius.pill,
+    height: 60,
+    paddingBottom: 0,
     borderTopWidth: 0,
-    ...shadows.lg,
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(229,231,235,0.8)',
+    ...shadows.md,
+    elevation: 6,
   },
-  label: { fontSize: 10, fontWeight: '500', marginTop: -2 },
 });

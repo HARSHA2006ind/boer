@@ -1,6 +1,8 @@
 export type RootStackParamList = {
   Auth: undefined;
   Main: undefined;
+  Onboarding: undefined;
+  Profile: undefined;
 };
 
 export type AuthStackParamList = {
@@ -15,7 +17,7 @@ export type MainTabParamList = {
   Farms: undefined;
   Finance: undefined;
   AI: undefined;
-  Profile: undefined;
+  Ecosystem: undefined;
 };
 
 export type FarmStackParamList = {
@@ -33,16 +35,128 @@ export type FinanceStackParamList = {
   ExpenseForm: { expenseId?: string; farmId?: string } | undefined;
   IncomeList: { farmId?: string } | undefined;
   IncomeForm: { incomeId?: string; farmId?: string } | undefined;
+  TransactionHistory: undefined;
 };
 
 export type AIStackParamList = {
   AIChat: undefined;
+  DiseaseScanner: undefined;
+  CropRecommendation: undefined;
+};
+
+export type EcosystemTabParamList = {
+  MarketTab: undefined;
+  SchemesTab: undefined;
+  CommunityTab: undefined;
+  LearnTab: undefined;
+  AlertsTab: undefined;
+};
+
+export type EcosystemStackParamList = {
+  EcosystemHome: undefined;
+  CropPriceDetail: { cropName: string };
+  SchemeDetail: { schemeId: string };
+  PostDetail: { postId: string };
+  CreatePost: undefined;
+  ArticleDetail: { articleId: string };
+  VideoDetail: { videoId: string };
+  FarmerProfile: { farmerId: string };
+  VideoLearningHub: undefined;
+  Marketplace: undefined;
+  FarmerDirectory: undefined;
 };
 
 export type ProfileStackParamList = {
   ProfileMain: undefined;
   ProfileEdit: undefined;
 };
+
+export interface CommunityPost {
+  id: string;
+  user_id: string;
+  content: string;
+  image_urls: string[];
+  post_type: 'text' | 'image' | 'question' | 'success_story' | 'pest_alert' | 'tip';
+  farmer_name: string;
+  village: string;
+  district: string;
+  likes_count: number;
+  comments_count: number;
+  created_at: string;
+}
+
+export interface GovernmentScheme {
+  id: string;
+  category: string;
+  name: string;
+  description: string;
+  benefits: string;
+  eligibility: string;
+  website_url: string;
+  application_process: string;
+  created_at: string;
+}
+
+export interface MarketCrop {
+  id: string;
+  crop_name: string;
+  current_price: number;
+  unit: string;
+  daily_change: number;
+  yesterday_price: number;
+  weekly_trend: number[];
+  monthly_trend: number[];
+  nearby_markets: { name: string; price: number }[];
+  icon: string;
+}
+
+export interface LearningArticle {
+  id: string;
+  category: string;
+  title: string;
+  summary: string;
+  content: string;
+  reading_time: string;
+  cover_image: string;
+  created_at: string;
+}
+
+export interface RegionalAlert {
+  id: string;
+  type: 'pest' | 'disease' | 'weather' | 'price';
+  title: string;
+  description: string;
+  affected_area: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  recommended_action: string;
+  created_at: string;
+  created_by: string;
+  farmer_name: string;
+}
+
+export interface FarmerProfile {
+  id: string;
+  user_id: string;
+  full_name: string;
+  village: string;
+  district: string;
+  state: string;
+  category: 'farmer' | 'expert' | 'officer' | 'vendor';
+  bio: string;
+  avatar_url: string;
+  crops_grown: string[];
+}
+
+export interface MarketplaceProduct {
+  id: string;
+  category: 'seeds' | 'fertilizers' | 'pesticides' | 'equipment' | 'irrigation';
+  name: string;
+  description: string;
+  price: number;
+  image_url: string;
+  seller_name: string;
+  seller_location: string;
+}
 
 export interface Farm {
   id: string;
@@ -74,6 +188,7 @@ export interface Crop {
   season: string;
   area_allocated: number;
   area_unit: string;
+  growth_stage: string;
   notes: string;
   created_at: string;
   updated_at: string;

@@ -1,119 +1,240 @@
-import { useState, useRef } from 'react';
-import { View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, radius } from '../theme';
+import { useState, useRef, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, Image, Animated } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { colors, spacing, radius, shadows, typography } from '../theme';
+import { useLanguage } from '../i18n/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabase';
+import { getAIProvider } from '../ai/aiProvider';
+import { Farm } from '../types';
 
 interface Props { navigation: any }
-
-interface Message { role: 'user' | 'ai'; text: string }
+interface Message { role: 'user' | 'ai'; text: string; image?: string; timestamp: number }
 
 const SUGGESTED_PROMPTS = [
-  'What crops grow best in loamy soil?',
-  'When should I irrigate my rice field?',
-  'How to control pest in cotton?',
-  'Best fertilizers for wheat?',
-  'Weather forecast for this week?',
+  'When should I irrigate?',
+  'Why are my leaves turning yellow?',
+  'Best fertilizer for cotton?',
+  'Cotton market price today?',
 ];
 
+function TypewriterText({ text }: { text: string }) {
+  const [displayed, setDisplayed] = useState('');
+  const indexRef = useRef(0);
+  useEffect(() => {
+    indexRef.current = 0; setDisplayed('');
+    const interval = setInterval(() => {
+      if (indexRef.current < text.length) { setDisplayed(text.slice(0, indexRef.current + 1)); indexRef.current++; }
+      else clearInterval(interval);
+    }, 12);
+    return () => clearInterval(interval);
+  }, [text]);
+  return <Text style={styles.bubbleText}>{displayed}</Text>;
+}
+
 export default function AIChatScreen({ navigation }: Props) {
+  const { t } = useLanguage();
+  const { user } = useAuth();
+  const insets = useSafeAreaInsets();
+  const flatRef = useRef<FlatList>(null);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'ai', text: 'Hello! I\'m your AI farming assistant. Ask me anything about crops, weather, irrigation, or pest management.' },
+    { role: 'ai', text: "Hello! I'm Boer AI. Ask me anything about your farm — irrigation, pests, weather, or market prices.", timestamp: Date.now() },
   ]);
   const [input, setInput] = useState('');
-  const flatRef = useRef<FlatList>(null);
+  const [loading, setLoading] = useState(false);
+  const [farms, setFarms] = useState<Farm[]>([]);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
-  const send = (text: string) => {
-    if (!text.trim()) return;
-    const userMsg: Message = { role: 'user', text: text.trim() };
-    const aiMsg: Message = { role: 'ai', text: getAIResponse(text.trim()) };
-    setMessages(prev => [...prev, userMsg, aiMsg]);
+  useEffect(() => { fetchFarms(); }, []);
+
+  async function fetchFarms() {
+    if (!user) return;
+    try { const { data } = await supabase.from('farms').select('*').eq('user_id', user.id); if (data) setFarms(data); } catch {}
+  }
+
+  function buildContext() {
+    if (farms.length === 0) return undefined;
+    const ctx: any = { farms: farms.map(f => ({ name: f.name, location: [f.village, f.district, f.state].filter(Boolean).join(', '), soilType: f.soil_type, waterSource: f.water_source, currentCrop: f.current_crop })) };
+    ctx.weather = { temperature: 28, humidity: 72, rainChance: 12, windSpeed: 12 };
+    return JSON.stringify(ctx);
+  }
+
+  async function send(text: string) {
+    if (!text.trim() || loading) return;
+    const userMsg: Message = { role: 'user', text: text.trim(), timestamp: Date.now() };
+    const updatedMessages = [...messagesRef.current, userMsg];
+    setMessages(updatedMessages);
     setInput('');
+    setLoading(true);
+
+    try {
+      const provider = getAIProvider();
+      const context = buildContext();
+      const reply = await provider.chat(updatedMessages.map(m => ({ role: m.role, text: m.text })), context);
+      setMessages(prev => [...prev, { role: 'ai', text: reply, timestamp: Date.now() }]);
+    } catch {
+      setMessages(prev => [...prev, { role: 'ai', text: 'Sorry, I encountered an error. Please try again.', timestamp: Date.now() }]);
+    }
+    setLoading(false);
     setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
-  };
+  }
+
+  async function handleCamera() {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') { Alert.alert('Permission needed', 'Camera permission is required.'); return; }
+      const result = await ImagePicker.launchCameraAsync({ quality: 0.7, base64: true });
+      if (!result.canceled && result.assets[0]) handleImage(result.assets[0]);
+    } catch (e: any) { Alert.alert('Error', e.message || 'Camera failed'); }
+  }
+
+  async function handleGallery() {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') { Alert.alert('Permission needed', 'Gallery permission is required.'); return; }
+      const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, base64: true });
+      if (!result.canceled && result.assets[0]) handleImage(result.assets[0]);
+    } catch (e: any) { Alert.alert('Error', e.message || 'Gallery failed'); }
+  }
+
+  async function handleImage(asset: any) {
+    const imgMsg: Message = { role: 'user', text: 'Analyzing this image...', image: asset.uri, timestamp: Date.now() };
+    setMessages(prev => [...prev, imgMsg]);
+    setLoading(true);
+    try {
+      const provider = getAIProvider();
+      const r = await provider.analyzeImage(asset.base64 || '', asset.mimeType || 'image/jpeg', 'Analyze for diseases and pests');
+      let result;
+      try { result = JSON.parse(r); } catch { result = { disease: 'Analysis complete', confidence: '—', symptoms: 'See details', action: r, prevention: 'Consult local expert' }; }
+      const reply = `**Crop Analysis**\n\n**Disease:** ${result.disease}\n**Confidence:** ${result.confidence}\n\n**Symptoms:** ${result.symptoms}\n\n**Action:** ${result.action}\n\n**Prevention:** ${result.prevention}`;
+      setMessages(prev => [...prev, { role: 'ai', text: reply, timestamp: Date.now() }]);
+    } catch { setMessages(prev => [...prev, { role: 'ai', text: 'Image analysis failed. Try a clearer image.', timestamp: Date.now() }]); }
+    setLoading(false);
+    setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
+  }
+
+  const tabBarHeight = 68;
+  const bottomPadding = Math.max(insets.bottom, 8) + tabBarHeight;
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
-      <LinearGradient colors={['#1E1B4B', '#312E81', '#4338CA']} style={styles.header}>
-        <Text style={styles.headerTitle}>AI Assistant</Text>
-        <Text style={styles.headerSub}>Ask anything about your farm</Text>
-      </LinearGradient>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>Boer AI</Text>
+            <Text style={styles.headerSub}>{loading ? 'Thinking...' : 'Online'}</Text>
+          </View>
+        </View>
+      </View>
 
-      <FlatList
-        ref={flatRef}
-        data={messages}
-        keyExtractor={(_, i) => String(i)}
-        contentContainerStyle={styles.chatContent}
+      <FlatList ref={flatRef} data={messages} keyExtractor={(_, i) => String(i)}
+        contentContainerStyle={[styles.chatContent, { paddingBottom: bottomPadding + spacing.md }]} style={styles.list}
+        onContentSizeChange={() => flatRef.current?.scrollToEnd({ animated: true })}
         renderItem={({ item }) => (
-          <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
-            {item.role === 'ai' && <Text style={styles.aiIcon}>🤖</Text>}
-            <Text style={[styles.bubbleText, item.role === 'user' ? styles.userText : styles.aiText]}>{item.text}</Text>
+          <View style={[styles.bubbleWrap, item.role === 'user' && styles.userBubbleWrap]}>
+            <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
+              {item.role === 'ai' && (
+                <View style={styles.aiIcon}><Ionicons name="sparkles" size={14} color={colors.primary} /></View>
+              )}
+              <View style={styles.bubbleContent}>
+                {item.role === 'ai' && !loading && messages.indexOf(item) === messages.length - 1 ?
+                  <TypewriterText text={item.text} /> :
+                  <Text style={[styles.bubbleText, item.role === 'user' && styles.userText]}>{item.text}</Text>
+                }
+                {item.image && <Image source={{ uri: item.image }} style={styles.chatImage} resizeMode="cover" />}
+              </View>
+            </View>
           </View>
         )}
-        ListHeaderComponent={
-          messages.length === 1 ? (
-            <View style={styles.suggestions}>
-              <Text style={styles.suggestTitle}>Try asking:</Text>
-              <View style={styles.chipRow}>
+        ListHeaderComponent={messages.length === 1 ? (
+          <View style={styles.welcomeSection}>
+            <View style={styles.welcomeCard}>
+              <View style={styles.welcomeIconWrap}>
+                <Ionicons name="sparkles" size={32} color={colors.primary} />
+              </View>
+              <Text style={styles.welcomeTitle}>How can I help you today?</Text>
+              <View style={styles.promptGrid}>
                 {SUGGESTED_PROMPTS.map((p, i) => (
-                  <TouchableOpacity key={i} style={styles.chip} onPress={() => send(p)}>
-                    <Text style={styles.chipText}>{p}</Text>
+                  <TouchableOpacity key={i} style={styles.promptChip} onPress={() => send(p)}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.textSecondary} />
+                    <Text style={styles.promptText}>{p}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
-          ) : null
-        }
+          </View>
+        ) : null}
       />
 
-      <View style={styles.inputBar}>
-        <TextInput
-          style={styles.input}
-          value={input} onChangeText={setInput}
-          placeholder="Ask about your farm..."
-          placeholderTextColor={colors.textLight}
-          onSubmitEditing={() => send(input)}
-          returnKeyType="send"
-        />
-        <TouchableOpacity style={styles.sendBtn} onPress={() => send(input)}>
-          <Text style={styles.sendIcon}>➤</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
-  );
-}
+      {/* Typing Indicator */}
+      {loading && (
+        <View style={styles.typingBar}>
+          <View style={styles.typingDots}><Text style={styles.typingText}>Thinking</Text><Text style={styles.dot}>.</Text><Text style={styles.dot}>.</Text><Text style={styles.dot}>.</Text></View>
+        </View>
+      )}
 
-function getAIResponse(text: string): string {
-  const lower = text.toLowerCase();
-  if (lower.includes('rice') || lower.includes('paddy')) return '🌾 Rice (Paddy) thrives in clay loam soil with plenty of water. Recommended varieties: Samba Masuri, BPT 5204. Sow after sufficient rainfall.';
-  if (lower.includes('wheat')) return '🌾 Wheat grows best in well-drained loamy soil. Sow between October-December. Use NPK 60:30:30 for good yield.';
-  if (lower.includes('cotton') || lower.includes('pest')) return '🛡️ For cotton pest control, use neem oil spray for organic farming. For chemical control, consult your local agriculture officer. Monitor regularly for bollworms.';
-  if (lower.includes('irrigation') || lower.includes('water')) return '💧 Check soil moisture before irrigating. Most crops need 2-3 cm of water per week. Drip irrigation saves 30-50% water compared to flood irrigation.';
-  if (lower.includes('weather') || lower.includes('rain')) return '⛅ Based on current data, expect partly cloudy conditions this week with a 30% chance of light showers. Good time for planting.';
-  if (lower.includes('fertilizer')) return '🧪 Use a balanced fertilizer like NPK 10-26-26 for most crops. Apply at sowing time. Organic compost at 10-15 tons/hectare improves soil health.';
-  if (lower.includes('hello') || lower.includes('hi')) return '👋 Hello! I\'m your AI farming assistant. How can I help you today? Ask me about crops, pests, weather, or irrigation!';
-  return '🤔 That\'s a great question! I recommend consulting your local agricultural extension officer for specific advice. In general, maintain good soil health with organic compost, monitor for pests weekly, and follow recommended irrigation schedules for your crop type.';
+      {/* Input Bar */}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={[styles.inputBar, { paddingBottom: bottomPadding }]}>
+          <TouchableOpacity style={styles.mediaBtn} onPress={handleCamera}>
+            <Ionicons name="camera-outline" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.mediaBtn} onPress={handleGallery}>
+            <Ionicons name="image-outline" size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+          <TextInput style={styles.input} value={input} onChangeText={setInput} placeholder="Ask anything about your farm..."
+            placeholderTextColor={colors.textLight} onSubmitEditing={() => send(input)} returnKeyType="send" multiline />
+          <TouchableOpacity style={[styles.sendBtn, loading && styles.sendBtnDisabled]} onPress={() => send(input)} disabled={loading}>
+            <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { padding: spacing.md, paddingTop: spacing.xl, paddingBottom: spacing.lg },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#FFFFFF' },
-  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: spacing.xs },
-  chatContent: { padding: spacing.md, paddingBottom: spacing.lg },
-  bubble: { flexDirection: 'row', maxWidth: '80%', marginBottom: spacing.md, padding: spacing.md, borderRadius: radius.lg },
-  userBubble: { backgroundColor: colors.primary, alignSelf: 'flex-end', borderBottomRightRadius: 4 },
-  aiBubble: { backgroundColor: colors.surface, alignSelf: 'flex-start', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: colors.border },
-  aiIcon: { fontSize: 20, marginRight: spacing.sm },
-  bubbleText: { fontSize: 14, lineHeight: 20, flex: 1 },
+  header: { backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  headerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.secondary, justifyContent: 'center', alignItems: 'center', marginRight: spacing.sm },
+  headerContent: {},
+  headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
+  headerSub: { fontSize: 11, color: colors.textSecondary, fontWeight: '500' },
+  list: { flex: 1 },
+  chatContent: { padding: spacing.md, paddingTop: spacing.lg },
+  welcomeSection: { marginBottom: spacing.md },
+  welcomeCard: { alignItems: 'center', paddingVertical: spacing.xl },
+  welcomeIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primaryLight, justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md },
+  welcomeTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: spacing.lg },
+  promptGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm },
+  promptChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.surface, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
+  promptText: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
+  bubbleWrap: { marginBottom: spacing.sm, flexDirection: 'row' },
+  userBubbleWrap: { justifyContent: 'flex-end' },
+  bubble: { flexDirection: 'row', maxWidth: '85%', borderRadius: radius.xl, padding: spacing.md },
+  userBubble: { backgroundColor: colors.primary, borderBottomRightRadius: radius.sm },
+  aiBubble: { backgroundColor: colors.surface, borderBottomLeftRadius: radius.sm, borderWidth: 1, borderColor: colors.border, gap: spacing.sm },
+  aiIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primaryLight, justifyContent: 'center', alignItems: 'center' },
+  bubbleContent: { flex: 1 },
+  bubbleText: { fontSize: 14, lineHeight: 21, color: colors.text, fontWeight: '500' },
   userText: { color: '#FFFFFF' },
-  aiText: { color: colors.text },
-  suggestions: { marginBottom: spacing.md },
-  suggestTitle: { fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginBottom: spacing.sm },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { backgroundColor: '#EEF2FF', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, borderWidth: 1, borderColor: '#C7D2FE' },
-  chipText: { fontSize: 13, color: '#4338CA' },
-  inputBar: { flexDirection: 'row', alignItems: 'center', padding: spacing.sm, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border },
-  input: { flex: 1, backgroundColor: colors.background, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2, fontSize: 15, color: colors.text, marginRight: spacing.sm },
-  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
-  sendIcon: { color: '#FFFFFF', fontSize: 18 },
+  chatImage: { width: '100%', height: 160, borderRadius: radius.md, marginTop: spacing.sm },
+  typingBar: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  typingDots: { flexDirection: 'row', alignItems: 'center', gap: 1, paddingLeft: spacing.md },
+  typingText: { fontSize: 13, color: colors.textLight, fontWeight: '500' },
+  dot: { fontSize: 18, color: colors.textLight, fontWeight: '700' },
+  inputBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingTop: spacing.sm, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.sm },
+  mediaBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.secondary, justifyContent: 'center', alignItems: 'center' },
+  input: { flex: 1, backgroundColor: colors.secondary, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 4, fontSize: 15, color: colors.text, maxHeight: 80 },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center' },
+  sendBtnDisabled: { backgroundColor: colors.textLight },
 });

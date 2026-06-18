@@ -7,11 +7,13 @@ import { colors, radius, spacing } from '../theme';
 import Button from '../components/Button';
 import Loading from '../components/Loading';
 import { Farm } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props { navigation: any; route: any }
 
 export default function ExpenseFormScreen({ navigation, route }: Props) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { expenseId, farmId: paramFarmId } = route.params || {};
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -30,7 +32,7 @@ export default function ExpenseFormScreen({ navigation, route }: Props) {
   async function loadExpense() { try { const d = await getExpense(expenseId); setTitle(d.title); setAmount(String(d.amount)); setCategory(d.category); setExpenseDate(d.expense_date || ''); setDescription(d.description || ''); setSelectedFarmId(d.farm_id); } catch (err: any) { Alert.alert('Error', err.message); navigation.goBack(); } finally { setFetching(false); } }
 
   async function handleSave() {
-    if (!title.trim() || !amount || !selectedFarmId) { Alert.alert('Validation', 'Title, amount, and farm are required'); return; }
+    if (!title.trim() || !amount || !selectedFarmId) { Alert.alert('Validation', `${t('expense.title')}, ${t('expense.amount')}, ${t('expense.farm')} ${t('common.required')}`); return; }
     setLoading(true);
     const payload = { user_id: user!.id, farm_id: selectedFarmId, title: title.trim(), category, amount: parseFloat(amount) || 0, expense_date: expenseDate, description: description.trim() };
     try { if (expenseId) await updateExpense(expenseId, payload); else await createExpense(payload); navigation.goBack(); }
@@ -42,9 +44,9 @@ export default function ExpenseFormScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>{expenseId ? 'Edit Expense' : 'Add Expense'}</Text>
+      <Text style={styles.title}>{expenseId ? t('expense.edit') : t('expense.add')}</Text>
 
-      <Text style={styles.label}>Farm</Text>
+      <Text style={styles.label}>{t('expense.farm')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
         {farms.map(f => (
           <TouchableOpacity key={f.id} style={[styles.chip, selectedFarmId === f.id && styles.chipActive]} onPress={() => setSelectedFarmId(f.id)}>
@@ -53,7 +55,7 @@ export default function ExpenseFormScreen({ navigation, route }: Props) {
         ))}
       </ScrollView>
 
-      <Text style={styles.label}>Category</Text>
+      <Text style={styles.label}>{t('expense.category')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
         {EXPENSE_CATEGORIES.map(c => (
           <TouchableOpacity key={c} style={[styles.chip, category === c && styles.chipActive]} onPress={() => setCategory(c)}>
@@ -62,14 +64,14 @@ export default function ExpenseFormScreen({ navigation, route }: Props) {
         ))}
       </ScrollView>
 
-      <InputField label="Title" value={title} onChangeText={setTitle} placeholder="e.g. Purchased seeds" />
-      <InputField label="Amount (₹)" value={amount} onChangeText={setAmount} placeholder="e.g. 5000" keyboardType="decimal-pad" />
-      <InputField label="Date (YYYY-MM-DD)" value={expenseDate} onChangeText={setExpenseDate} placeholder="2026-06-14" />
-      <InputField label="Description" value={description} onChangeText={setDescription} placeholder="Optional details..." multiline style={styles.multiline} />
+      <InputField label={t('expense.title')} value={title} onChangeText={setTitle} placeholder="e.g. Purchased seeds" />
+      <InputField label={`${t('expense.amount')} (₹)`} value={amount} onChangeText={setAmount} placeholder="e.g. 5000" keyboardType="decimal-pad" />
+      <InputField label={`${t('expense.date')} (YYYY-MM-DD)`} value={expenseDate} onChangeText={setExpenseDate} placeholder="2026-06-14" />
+      <InputField label={t('expense.description')} value={description} onChangeText={setDescription} placeholder="Optional details..." multiline style={styles.multiline} />
 
       <View style={styles.buttons}>
-        <Button title={expenseId ? 'Update Expense' : 'Save Expense'} onPress={handleSave} loading={loading} size="lg" />
-        <Button title="Cancel" variant="outline" onPress={() => navigation.goBack()} />
+        <Button title={expenseId ? t('expense.update') : t('expense.save')} onPress={handleSave} loading={loading} size="lg" />
+        <Button title={t('common.cancel')} variant="outline" onPress={() => navigation.goBack()} />
       </View>
     </ScrollView>
   );

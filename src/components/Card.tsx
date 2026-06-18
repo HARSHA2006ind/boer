@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   titleGlass: { color: '#FFFFFF' },
   subtitle: {

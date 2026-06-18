@@ -9,6 +9,7 @@ import Loading from '../components/Loading';
 import SearchableSelect from '../components/SearchableSelect';
 import { CROPS } from '../data/farming';
 import { Farm } from '../types';
+import { useLanguage } from '../i18n/LanguageContext';
 
 const QUANTITY_UNITS = ['Kg', 'Quintal', 'Ton', 'Bags', 'Pieces', 'Crates', 'Boxes', 'Litres', 'Other'];
 
@@ -16,6 +17,7 @@ interface Props { navigation: any; route: any }
 
 export default function IncomeFormScreen({ navigation, route }: Props) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { incomeId, farmId: paramFarmId } = route.params || {};
   const [cropName, setCropName] = useState('');
   const [amount, setAmount] = useState('');
@@ -36,7 +38,7 @@ export default function IncomeFormScreen({ navigation, route }: Props) {
   async function loadIncome() { try { const d = await getIncomeRecord(incomeId); setCropName(d.crop_name); setAmount(String(d.amount)); setQuantity(String(d.quantity || '')); setQuantityUnit(d.quantity_unit || 'Kg'); setIncomeDate(d.income_date || ''); setBuyerName(d.buyer_name || ''); setNotes(d.notes || ''); setSelectedFarmId(d.farm_id); } catch (err: any) { Alert.alert('Error', err.message); navigation.goBack(); } finally { setFetching(false); } }
 
   async function handleSave() {
-    if (!cropName.trim() || !amount || !selectedFarmId) { Alert.alert('Validation', 'Crop name, amount, and farm are required'); return; }
+    if (!cropName.trim() || !amount || !selectedFarmId) { Alert.alert('Validation', `${t('income.cropSold')}, ${t('income.amount')}, ${t('income.farm')} ${t('common.required')}`); return; }
     setLoading(true);
     const payload = { user_id: user!.id, farm_id: selectedFarmId, crop_id: null, crop_name: cropName.trim(), amount: parseFloat(amount) || 0, quantity: parseFloat(quantity) || 0, quantity_unit: quantityUnit, income_date: incomeDate, buyer_name: buyerName.trim(), notes: notes.trim() };
     try { if (incomeId) await updateIncomeRecord(incomeId, payload); else await createIncomeRecord(payload); navigation.goBack(); }
@@ -48,9 +50,9 @@ export default function IncomeFormScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>{incomeId ? 'Edit Income' : 'Add Income'}</Text>
+      <Text style={styles.title}>{incomeId ? t('income.edit') : t('income.add')}</Text>
 
-      <Text style={styles.label}>Farm</Text>
+      <Text style={styles.label}>{t('income.farm')}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
         {farms.map(f => (
           <TouchableOpacity key={f.id} style={[styles.chip, selectedFarmId === f.id && styles.chipActive]} onPress={() => setSelectedFarmId(f.id)}>
@@ -59,17 +61,17 @@ export default function IncomeFormScreen({ navigation, route }: Props) {
         ))}
       </ScrollView>
 
-      <SearchableSelect label="Crop Sold *" options={CROPS} value={cropName} onSelect={setCropName} icon="🌾" searchPlaceholder="Search crops..." />
-      <InputField label="Amount Received (₹)" value={amount} onChangeText={setAmount} placeholder="e.g. 50000" keyboardType="decimal-pad" />
-      <InputField label="Quantity" value={quantity} onChangeText={setQuantity} placeholder="e.g. 100" keyboardType="decimal-pad" />
-      <SearchableSelect label="Quantity Unit" options={QUANTITY_UNITS} value={quantityUnit} onSelect={setQuantityUnit} icon="⚖️" />
-      <InputField label="Date (YYYY-MM-DD)" value={incomeDate} onChangeText={setIncomeDate} placeholder="2026-06-14" />
-      <InputField label="Buyer Name" value={buyerName} onChangeText={setBuyerName} placeholder="Mandi Trader" />
-      <InputField label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional notes..." multiline style={styles.multiline} />
+      <SearchableSelect label={`${t('income.cropSold')} *`} options={CROPS} value={cropName} onSelect={setCropName} icon="🌾" searchPlaceholder={t('common.search')} />
+      <InputField label={`${t('income.amount')} (₹)`} value={amount} onChangeText={setAmount} placeholder="e.g. 50000" keyboardType="decimal-pad" />
+      <InputField label={t('income.quantity')} value={quantity} onChangeText={setQuantity} placeholder="e.g. 100" keyboardType="decimal-pad" />
+      <SearchableSelect label={t('income.quantityUnit')} options={QUANTITY_UNITS} value={quantityUnit} onSelect={setQuantityUnit} icon="⚖️" />
+      <InputField label={`${t('income.date')} (YYYY-MM-DD)`} value={incomeDate} onChangeText={setIncomeDate} placeholder="2026-06-14" />
+      <InputField label={t('income.buyerName')} value={buyerName} onChangeText={setBuyerName} placeholder="Mandi Trader" />
+      <InputField label={t('income.notes')} value={notes} onChangeText={setNotes} placeholder="Optional notes..." multiline style={styles.multiline} />
 
       <View style={styles.buttons}>
-        <Button title={incomeId ? 'Update Income' : 'Save Income'} onPress={handleSave} loading={loading} size="lg" />
-        <Button title="Cancel" variant="outline" onPress={() => navigation.goBack()} />
+        <Button title={incomeId ? t('income.update') : t('income.save')} onPress={handleSave} loading={loading} size="lg" />
+        <Button title={t('common.cancel')} variant="outline" onPress={() => navigation.goBack()} />
       </View>
     </ScrollView>
   );

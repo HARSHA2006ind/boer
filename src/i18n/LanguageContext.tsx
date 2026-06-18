@@ -24,7 +24,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((saved: string | null) => {
-      if (saved && ['en','ta','hi','te','kn','ml','bn','mr','gu','pa'].includes(saved)) {
+      if (saved && ['en','ta','hi','te','kn','ml','bn','mr','gu','pa','or','as','ur'].includes(saved)) {
         setLanguageState(saved as LanguageCode);
       }
       setReady(true);
@@ -34,7 +34,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLanguage = useCallback(async (lang: LanguageCode) => {
     setLanguageState(lang);
     await AsyncStorage.setItem(STORAGE_KEY, lang);
-    try { await supabase.auth.updateUser({ data: { preferred_language: lang === 'en' ? 'English' : lang === 'te' ? 'Telugu' : lang === 'hi' ? 'Hindi' : lang === 'ta' ? 'Tamil' : lang === 'kn' ? 'Kannada' : lang === 'ml' ? 'Malayalam' : lang === 'bn' ? 'Bengali' : lang === 'mr' ? 'Marathi' : lang === 'gu' ? 'Gujarati' : lang === 'pa' ? 'Punjabi' : 'English' } }); }
+    try { await supabase.auth.updateUser({ data: { preferred_language: lang === 'en' ? 'English' : lang === 'te' ? 'Telugu' : lang === 'hi' ? 'Hindi' : lang === 'ta' ? 'Tamil' : lang === 'kn' ? 'Kannada' : lang === 'ml' ? 'Malayalam' : lang === 'bn' ? 'Bengali' : lang === 'mr' ? 'Marathi' : lang === 'gu' ? 'Gujarati' : lang === 'pa' ? 'Punjabi' : lang === 'or' ? 'Odia' : lang === 'as' ? 'Assamese' : lang === 'ur' ? 'Urdu' : 'English' } }); }
     catch {}
   }, []);
 

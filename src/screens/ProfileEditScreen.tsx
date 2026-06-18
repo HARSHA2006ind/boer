@@ -14,7 +14,7 @@ import { LANGUAGES } from '../data/languages';
 const LANGUAGE_MAP: Record<string, string> = {
   'English': 'en', 'Tamil': 'ta', 'Hindi': 'hi', 'Telugu': 'te',
   'Kannada': 'kn', 'Malayalam': 'ml', 'Bengali': 'bn', 'Marathi': 'mr',
-  'Gujarati': 'gu', 'Punjabi': 'pa',
+  'Gujarati': 'gu', 'Punjabi': 'pa', 'Odia': 'or', 'Assamese': 'as', 'Urdu': 'ur',
 };
 
 function findLangName(code: string): string {
@@ -67,7 +67,7 @@ export default function ProfileEditScreen({ navigation }: Props) {
         <Text style={styles.title}>{t('profile.edit')}</Text>
         <Text style={styles.subtitle}>Update your personal information</Text>
 
-        <InputField label={`${t('profile.fullName')} *`} value={fullName} onChangeText={setFullName} placeholder="Harsha Reddy" />
+        <InputField label={`${t('profile.fullName')} *`} value={fullName} onChangeText={setFullName} placeholder="Your Name" />
         <InputField label={t('profile.mobile')} value={mobileNumber} onChangeText={setMobileNumber} placeholder="+91 98765 43210" keyboardType="phone-pad" />
         <SearchableSelect label={t('profile.language')} options={LANGUAGES.map(l => ({ label: l.name, value: l.name }))} value={language} onSelect={handleLanguageChange} icon="🗣️" />
         <SearchableSelect label={t('farm.country')} options={COUNTRIES.map(c => ({ label: `${c.name} (${c.dialCode})`, value: c.code }))} value={country} onSelect={setCountry} icon="🌍" />
