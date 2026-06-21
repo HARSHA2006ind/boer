@@ -23,7 +23,7 @@ function FinanceSnapshotCard({ revenue, expenses, profit, month, onViewDetails }
     <Animated.View entering={FadeInUp.duration(500).delay(450)} style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="wallet-outline" size={16} color="#1E6F50" />
+          <Ionicons name="wallet-outline" size={16} color="#6B705C" />
           <Text style={styles.title}>{t('home.finance.title')}</Text>
         </View>
         <Text style={styles.month}>{month}</Text>

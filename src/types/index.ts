@@ -5,6 +5,7 @@ export type RootStackParamList = {
   Profile: undefined;
   AIHub: undefined;
   AlertHistory: undefined;
+  AlertDetail: { alert: any };
   SmartReminder: undefined;
   MarketIntelligence: undefined;
 };

@@ -56,12 +56,12 @@ function WeatherHero({ temperature, condition, location, farmName, humidity, win
   }, [condition]);
 
   const gradients: Record<string, readonly [string, string]> = {
-    sunny: ['#2F5D50', '#1E4238'] as const,
-    cloudy: ['#4A6274', '#2D3E4E'] as const,
-    overcast: ['#3D4A53', '#252F36'] as const,
-    rainy: ['#2D4A6F', '#1A2E47'] as const,
-    thunderstorm: ['#1E2433', '#0F131C'] as const,
-    fog: ['#4A4E52', '#2D3033'] as const,
+    sunny: ['#A5A58D', '#6B705C'] as const,
+    cloudy: ['#8B8B7A', '#6B6B5C'] as const,
+    overcast: ['#7A7A6A', '#5A5A4C'] as const,
+    rainy: ['#5A7A8A', '#3A5A6A'] as const,
+    thunderstorm: ['#4A4A3A', '#2A2A20'] as const,
+    fog: ['#8A8A7A', '#6A6A5C'] as const,
   };
 
   const weatherGradient = gradients[weatherType] || gradients.sunny;
@@ -167,12 +167,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(255,215,0,0.1)',
+            backgroundColor: 'rgba(203,153,126,0.12)',
     borderRadius: radius.pill,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
   },
-  adviceText: { fontSize: 12, fontWeight: '600', color: '#FFD700', flex: 1 },
+  adviceText: { fontSize: 12, fontWeight: '600', color: '#CB997E', flex: 1 },
   forecastRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

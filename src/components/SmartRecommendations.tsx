@@ -24,7 +24,7 @@ function SmartRecommendations({ recommendations = [], onPress }: Props) {
     <Animated.View entering={FadeInUp.duration(500).delay(150)} style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="bulb-outline" size={16} color="#2F5D50" />
+          <Ionicons name="bulb-outline" size={16} color="#6B705C" />
           <Text style={styles.title}>Smart Recommendations</Text>
         </View>
       </View>

@@ -24,7 +24,7 @@ function MarketPricesRow({ crops, onViewAll, onCropPress }: Props) {
     <Animated.View entering={FadeInUp.duration(500).delay(500)} style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="trending-up-outline" size={16} color="#2F5D50" />
+          <Ionicons name="trending-up-outline" size={16} color="#6B705C" />
           <Text style={styles.title}>Market Prices</Text>
         </View>
         {crops.length > 0 && (
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   viewAllText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2F5D50',
+    color: '#6B705C',
   },
   scrollContent: {
     gap: spacing.sm,
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
   cropPrice: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#2F5D50',
+    color: '#6B705C',
   },
   trendBadge: {
     flexDirection: 'row',

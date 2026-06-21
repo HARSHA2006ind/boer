@@ -14,7 +14,7 @@ const SETTINGS = [
   { icon: 'person-outline', label: 'Edit Profile', color: '#3B82F6', screen: 'ProfileEdit' },
   { icon: 'settings-outline', label: 'Settings', color: '#6B7280', screen: 'Settings' },
   { icon: 'notifications-outline', label: 'Notifications', color: '#F59E0B' },
-  { icon: 'language-outline', label: 'Language', color: colors.primary },
+  { icon: 'language-outline', label: 'Language', color: colors.primary, screen: 'Settings' },
   { icon: 'lock-closed-outline', label: 'Privacy', color: '#6B7280' },
   { icon: 'document-text-outline', label: 'Terms & Conditions', color: '#8B5CF6' },
   { icon: 'help-circle-outline', label: 'Support', color: '#3BA55D' },

@@ -25,7 +25,7 @@ function SmartReminderCard({ reminders, onViewAll, onPress }: Props) {
       <Animated.View entering={FadeInUp.duration(500).delay(300)} style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="bulb-outline" size={16} color="#2F5D50" />
+          <Ionicons name="bulb-outline" size={16} color="#6B705C" />
           <Text style={styles.title}>Smart Reminder</Text>
         </View>
       </View>
@@ -56,7 +56,7 @@ function SmartReminderCard({ reminders, onViewAll, onPress }: Props) {
       )}
       <TouchableOpacity onPress={onViewAll} style={styles.viewBtn} activeOpacity={0.7}>
         <Text style={styles.viewBtnText}>View Full Schedule</Text>
-        <Ionicons name="chevron-forward" size={14} color="#2F5D50" />
+        <Ionicons name="chevron-forward" size={14} color="#6B705C" />
       </TouchableOpacity>
     </Animated.View>
   </TouchableOpacity>
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   viewBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2F5D50',
+    color: '#6B705C',
   },
 });
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Animated as RNAnimated } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,6 +14,7 @@ import AlertsSection, { HomeAlert } from '../components/AlertsSection';
 import SmartReminderCard, { Reminder } from '../components/SmartReminderCard';
 import MarketPricesRow from '../components/MarketPricesRow';
 import { spacing } from '../theme';
+import { duration } from '../theme/motion';
 
 const TAB_BAR_HEIGHT = 80;
 
@@ -26,6 +27,8 @@ const CROP_ICONS: Record<string, string> = {
   tomato: '🍅', onion: '🧅', potato: '🥔', groundnut: '🥜', chilli: '🌶️',
   banana: '🍌', mango: '🥭', soybean: '🫘', sunflower: '🌻', coconut: '🥥',
 };
+
+const SECTION_DELAYS = [0, 100, 150, 200, 250];
 
 interface Props { navigation: any }
 
@@ -69,7 +72,7 @@ export default function HomeDashboard({ navigation }: Props) {
   }, [user]);
 
   useEffect(() => { fetchFarms(); loadMarketData(); }, [fetchFarms, loadMarketData]);
-  useEffect(() => { RNAnimated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start(); }, []);
+  useEffect(() => { RNAnimated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start(); }, []);
 
   const alerts: HomeAlert[] = useMemo(() => {
     const list: HomeAlert[] = [];
@@ -101,103 +104,113 @@ export default function HomeDashboard({ navigation }: Props) {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.lg }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchFarms(); }} tintColor="#2F5D50" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchFarms(); }} tintColor="#6B705C" />}
         >
-          {/* Header */}
-          <Animated.View entering={FadeInDown.duration(500).delay(50)} style={styles.header}>
-            <View>
-              <Text style={styles.brandName}>BOER</Text>
-              <Text style={styles.brandSub}>Smart Farming Platform</Text>
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.greeting}>Good {getGreeting()}</Text>
               <Text style={styles.date}>{getFormattedDate()}</Text>
             </View>
             <View style={styles.headerRight}>
               <TouchableOpacity
                 style={styles.aiBtn}
                 onPress={() => navigation.navigate('AIHub')}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
-                <Ionicons name="sparkles" size={20} color="#FFFFFF" />
+                <Ionicons name="sparkles" size={18} color="#FFFFFF" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.avatarBtn} onPress={() => navigation.navigate('Profile')} activeOpacity={0.7}>
-                <Ionicons name="person-circle" size={42} color="#2F5D50" />
+              <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
+                <Ionicons name="person-circle" size={38} color="#6B705C" />
               </TouchableOpacity>
             </View>
+          </View>
+
+          <Animated.View entering={FadeIn.duration(duration.normal)}>
+            <WeatherHero
+              temperature={weather.temperature || 30}
+              condition={weather.condition || 'Sunny'}
+              location={weather.location || ''}
+              farmName={defaultFarm?.name}
+              humidity={weather.humidity || 65}
+              windSpeed={weather.windSpeed || 12}
+              rainChance={weather.rainChance || 10}
+              forecast={weather.forecast || []}
+            />
           </Animated.View>
 
-          {/* 1. Weather Card */}
-          <WeatherHero
-            temperature={weather.temperature || 30}
-            condition={weather.condition || 'Sunny'}
-            location={weather.location || ''}
-            farmName={defaultFarm?.name}
-            humidity={weather.humidity || 65}
-            windSpeed={weather.windSpeed || 12}
-            rainChance={weather.rainChance || 10}
-            forecast={weather.forecast || []}
-          />
+          <Animated.View entering={FadeIn.duration(duration.normal)}>
+            <SmartRecommendations
+              recommendations={[]}
+              onPress={(id) => {
+                if (id === 'irrigate' || id === 'harvest' || id === 'fertilizer') {
+                  navigation.navigate('SmartReminder');
+                } else {
+                  navigation.navigate('AlertHistory');
+                }
+              }}
+            />
+          </Animated.View>
 
-          {/* 2. Smart Recommendations */}
-          <SmartRecommendations
-            recommendations={[]}
-            onPress={(id) => {
-              if (id === 'irrigate' || id === 'harvest' || id === 'fertilizer') {
-                navigation.navigate('SmartReminder');
-              } else {
-                navigation.navigate('AlertHistory');
-              }
-            }}
-          />
+          <Animated.View entering={FadeIn.duration(duration.normal)}>
+            <AlertsSection
+              alerts={alerts}
+              onViewAll={() => navigation.navigate('AlertHistory')}
+              onAlertPress={(alert) => navigation.navigate('AlertDetail', { alert })}
+            />
+          </Animated.View>
 
-          {/* 3. Alert Center */}
-          <AlertsSection
-            alerts={alerts}
-            onViewAll={() => navigation.navigate('AlertHistory')}
-            onPress={() => navigation.navigate('AlertHistory')}
-          />
+          <Animated.View entering={FadeIn.duration(duration.normal)}>
+            <SmartReminderCard
+              reminders={reminders}
+              onViewAll={() => navigation.navigate('SmartReminder')}
+              onPress={() => navigation.navigate('SmartReminder')}
+            />
+          </Animated.View>
 
-          {/* 4. Smart Reminder */}
-          <SmartReminderCard
-            reminders={reminders}
-            onViewAll={() => navigation.navigate('SmartReminder')}
-            onPress={() => navigation.navigate('SmartReminder')}
-          />
-
-          {/* 5. Market Highlights */}
-          <MarketPricesRow
-            crops={marketCrops}
-            onViewAll={() => navigation.navigate('Market')}
-            onCropPress={(crop) => navigation.navigate('Market')}
-          />
+          <Animated.View entering={FadeIn.duration(duration.normal)}>
+            <MarketPricesRow
+              crops={marketCrops}
+              onViewAll={() => navigation.navigate('Market')}
+              onCropPress={(crop) => navigation.navigate('Market')}
+            />
+          </Animated.View>
         </ScrollView>
       </RNAnimated.View>
     </View>
   );
 }
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Morning';
+  if (h < 17) return 'Afternoon';
+  return 'Evening';
+}
+
 const styles = StyleSheet.create({
-  wrapper: { flex: 1, backgroundColor: '#F8F7F2' },
+  wrapper: { flex: 1, backgroundColor: '#F5F3EF' },
   content: { flex: 1, paddingHorizontal: spacing.md },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: spacing.md,
+    paddingTop: spacing.sm,
   },
-  brandName: { fontSize: 24, fontWeight: '800', color: '#2F5D50', letterSpacing: -0.5 },
-  brandSub: { fontSize: 12, color: '#708238', fontWeight: '600', marginTop: -1, letterSpacing: 0.2 },
-  date: { fontSize: 11, color: '#8B7355', fontWeight: '500', marginTop: 4 },
-  avatarBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  headerLeft: {},
+  greeting: { fontSize: 22, fontWeight: '700', color: '#1F2937', letterSpacing: -0.3 },
+  date: { fontSize: 12, color: '#6B7280', fontWeight: '500', marginTop: 2 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   aiBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#2F5D50',
+    backgroundColor: '#6B705C',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#2F5D50',
+    shadowColor: '#6B705C',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },

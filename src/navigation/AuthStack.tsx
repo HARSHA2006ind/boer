@@ -25,7 +25,7 @@ export default function AuthStack() {
           headerBackTitle: 'Back',
           headerTintColor: '#2E7D32',
           headerStyle: { backgroundColor: '#FFFFFF' },
-          headerTitleStyle: { color: '#1B5E20', fontWeight: '600' },
+          headerTitleStyle: { color: '#6B705C', fontWeight: '600' },
         }}
       />
       <Stack.Screen
@@ -37,7 +37,7 @@ export default function AuthStack() {
           headerBackTitle: 'Back',
           headerTintColor: '#2E7D32',
           headerStyle: { backgroundColor: '#FFFFFF' },
-          headerTitleStyle: { color: '#1B5E20', fontWeight: '600' },
+          headerTitleStyle: { color: '#6B705C', fontWeight: '600' },
         }}
       />
       <Stack.Screen
@@ -49,7 +49,7 @@ export default function AuthStack() {
           headerBackTitle: 'Back',
           headerTintColor: '#2E7D32',
           headerStyle: { backgroundColor: '#FFFFFF' },
-          headerTitleStyle: { color: '#1B5E20', fontWeight: '600' },
+          headerTitleStyle: { color: '#6B705C', fontWeight: '600' },
         }}
       />
     </Stack.Navigator>

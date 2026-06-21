@@ -26,7 +26,7 @@ const REMINDERS: ReminderItem[] = [
   { id: '2', icon: '🌾', title: 'Harvest Window Opens In 3 Days', subtitle: 'Paddy in North field ready for harvest from Jun 22.', color: '#2D8A4E', bgColor: '#ECFDF5', date: 'Jun 22' },
   { id: '3', icon: '🧪', title: 'Fertilizer Application Due', subtitle: 'Apply NPK (20-10-10) to active wheat crop.', color: '#D4872F', bgColor: '#FFF8F0', date: 'Jun 20' },
   { id: '4', icon: '🔧', title: 'Equipment Maintenance Due', subtitle: 'Tractor service overdue by 15 days.', color: '#6B7280', bgColor: '#F3F4F6', date: 'Overdue' },
-  { id: '5', icon: '🌱', title: 'Sowing Window Opens Next Week', subtitle: 'Optimal time for Kharif cropping from Jun 25.', color: '#2F5D50', bgColor: '#F0FDF4', date: 'Jun 25' },
+  { id: '5', icon: '🌱', title: 'Sowing Window Opens Next Week', subtitle: 'Optimal time for Kharif cropping from Jun 25.', color: '#6B705C', bgColor: '#F0FDF4', date: 'Jun 25' },
 ];
 
 const WEATHER_TIPS: WeatherTip[] = [
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   calRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  calDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#2F5D50' },
+  calDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#6B705C' },
   calText: { fontSize: 13, color: '#374151', fontWeight: '500' },
   soilCard: {
     backgroundColor: '#FFFFFF',

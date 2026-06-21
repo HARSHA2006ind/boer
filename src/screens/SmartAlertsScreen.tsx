@@ -17,10 +17,10 @@ const ALERT_ICONS: Record<string, string> = {
 };
 
 const SEVERITY_CONFIG: Record<string, { color: string; bg: string }> = {
-  critical: { color: '#991B1B', bg: '#FEE2E2' },
-  high: { color: '#92400E', bg: '#FEF3C7' },
-  medium: { color: '#1E40AF', bg: '#DBEAFE' },
-  low: { color: '#065F46', bg: '#D1FAE5' },
+  critical: { color: '#D62828', bg: '#FEE2E2' },
+  high: { color: '#D97706', bg: '#FFF7ED' },
+  medium: { color: '#457B9D', bg: '#EFF6FF' },
+  low: { color: '#6B7280', bg: '#F3F4F6' },
 };
 
 export default function SmartAlertsScreen({ navigation }: Props) {

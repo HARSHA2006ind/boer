@@ -20,12 +20,12 @@ function HomeFarmCard({ farms, onFarmPress, onAddFarm }: Props) {
       <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Ionicons name="leaf-outline" size={16} color="#2F5D50" />
+            <Ionicons name="leaf-outline" size={16} color="#6B705C" />
             <Text style={styles.title}>My Farms</Text>
           </View>
         </View>
         <TouchableOpacity onPress={onAddFarm} style={styles.addCard} activeOpacity={0.7}>
-          <Ionicons name="add-circle-outline" size={32} color="#2F5D50" />
+          <Ionicons name="add-circle-outline" size={32} color="#6B705C" />
           <Text style={styles.addText}>Add Your First Farm</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -36,11 +36,11 @@ function HomeFarmCard({ farms, onFarmPress, onAddFarm }: Props) {
     <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="leaf-outline" size={16} color="#2F5D50" />
+          <Ionicons name="leaf-outline" size={16} color="#6B705C" />
           <Text style={styles.title}>My Farms</Text>
         </View>
         <TouchableOpacity onPress={onAddFarm}>
-          <Ionicons name="add-circle" size={22} color="#2F5D50" />
+          <Ionicons name="add-circle" size={22} color="#6B705C" />
         </TouchableOpacity>
       </View>
       <Animated.ScrollView
@@ -51,7 +51,7 @@ function HomeFarmCard({ farms, onFarmPress, onAddFarm }: Props) {
         decelerationRate="fast"
       >
         {farms.map((farm, i) => {
-          const colors: [string, string] = i % 3 === 0 ? ['#2F5D50', '#1E4238'] : i % 3 === 1 ? ['#708238', '#4A5A1E'] : ['#8B7355', '#5C4E36'];
+          const colors: [string, string] = i % 3 === 0 ? ['#6B705C', '#4A4F3E'] : i % 3 === 1 ? ['#A5A58D', '#7A7A6A'] : ['#CB997E', '#A87A6A'];
           return (
             <TouchableOpacity key={farm.id} onPress={() => onFarmPress(farm.id)} activeOpacity={0.95}>
               <Animated.View entering={FadeInDown.duration(400).delay(450 + i * 100)} style={styles.farmCard}>
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   addText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2F5D50',
+    color: '#6B705C',
   },
 });
 

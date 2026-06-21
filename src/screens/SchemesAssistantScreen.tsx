@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   quickLabel: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
   quickRow: { marginBottom: spacing.md },
   quickChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.surface, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2, borderRadius: radius.pill, borderWidth: 1, borderColor: '#E8D5B5', marginRight: spacing.sm },
-  quickText: { fontSize: 12, color: '#8B7355', fontWeight: '600', maxWidth: 180 },
+  quickText: { fontSize: 12, color: '#6B7280', fontWeight: '600', maxWidth: 180 },
   error: { color: colors.error, fontSize: 13, fontWeight: '500', marginBottom: spacing.sm },
   resultCard: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.md, ...shadows.md },
   resultHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },

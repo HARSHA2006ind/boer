@@ -1,8 +1,11 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, radius, shadows } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
+import { spacing, radius } from '../theme';
+import { useLanguage } from '../i18n/LanguageContext';
+import { duration } from '../theme/motion';
 
 export interface HomeAlert {
   id: string;
@@ -13,163 +16,96 @@ export interface HomeAlert {
   affectedFarm?: string;
 }
 
-const ALERT_META: Record<string, { icon: string; label: string }> = {
-  heavy_rain: { icon: 'rainy-outline', label: 'Weather' },
-  cyclone: { icon: 'alert-circle-outline', label: 'Storm' },
-  heat_wave: { icon: 'sunny-outline', label: 'Heat' },
-  flood: { icon: 'water-outline', label: 'Flood' },
-  pest: { icon: 'bug-outline', label: 'Pest' },
-};
-
-const SEV_CONFIG: Record<string, { bg: string; dot: string; label: string }> = {
-  critical: { bg: '#FDF2F2', dot: '#C0392B', label: 'CRITICAL' },
-  high: { bg: '#FFF8F0', dot: '#D4872F', label: 'HIGH' },
-  medium: { bg: '#EFF6FF', dot: '#3B82F6', label: 'MEDIUM' },
-  low: { bg: '#F3F4F6', dot: '#6B7280', label: 'LOW' },
+const SEV_META: Record<string, { color: string; bg: string; icon: string }> = {
+  critical: { color: '#D62828', bg: '#FEE2E2', icon: 'alert-circle' },
+  high: { color: '#D97706', bg: '#FFF7ED', icon: 'warning' },
+  medium: { color: '#457B9D', bg: '#EFF6FF', icon: 'alert-outline' },
+  low: { color: '#6B7280', bg: '#F3F4F6', icon: 'information-circle-outline' },
 };
 
 interface Props {
   alerts: HomeAlert[];
   onViewAll: () => void;
-  onPress?: () => void;
+  onAlertPress: (alert: HomeAlert) => void;
 }
 
-function AlertsSection({ alerts, onViewAll, onPress }: Props) {
-  const visible = alerts.filter((a) => a.severity === 'critical' || a.severity === 'high');
+function AlertsSection({ alerts, onViewAll, onAlertPress }: Props) {
+  const { colors } = useTheme();
+  const { t } = useLanguage();
+  const visible = useMemo(() => alerts.filter(a => a.severity === 'critical' || a.severity === 'high'), [alerts]);
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <Animated.View entering={FadeInUp.duration(500).delay(200)} style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.iconBadge}>
-              <Ionicons name="warning" size={14} color="#FFFFFF" />
-            </View>
-            <Text style={styles.title}>Alert Center</Text>
+    <Animated.View entering={FadeIn.duration(duration.normal)} style={[styles.container, { backgroundColor: colors.surface }]}>
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={[styles.iconBadge, { backgroundColor: SEV_META.critical.color }]}>
+            <Ionicons name="warning" size={12} color="#FFFFFF" />
           </View>
+          <Text style={[styles.title, { color: colors.text }]}>{t('alert.title')}</Text>
           {visible.length > 0 && (
-            <View style={styles.countBadge}>
+            <View style={[styles.countBadge, { backgroundColor: SEV_META.critical.color }]}>
               <Text style={styles.countText}>{visible.length}</Text>
             </View>
           )}
         </View>
-        {alerts.length > 0 ? (
-          <View style={styles.list}>
-            {alerts.slice(0, 3).map((alert, i) => {
-              const meta = ALERT_META[alert.type] || { icon: 'warning-outline', label: 'Alert' };
-              const sev = SEV_CONFIG[alert.severity] || SEV_CONFIG.medium;
-              return (
-                <Animated.View
-                  key={alert.id}
-                  entering={FadeInUp.duration(400).delay(300 + i * 100)}
+        <TouchableOpacity onPress={onViewAll}>
+          <Text style={[styles.viewAllText, { color: colors.primary }]}>{t('home.alerts.viewAll')}</Text>
+        </TouchableOpacity>
+      </View>
+      {alerts.length > 0 ? (
+        <View style={styles.list}>
+          {alerts.slice(0, 3).map((alert, i) => {
+            const sev = SEV_META[alert.severity] || SEV_META.medium;
+            return (
+              <Animated.View key={alert.id} entering={FadeIn.duration(300).delay(i * 60)}>
+                <TouchableOpacity
                   style={[styles.alertCard, { backgroundColor: sev.bg }]}
+                  onPress={() => onAlertPress(alert)}
+                  activeOpacity={0.8}
                 >
                   <View style={styles.alertLeft}>
-                    <View style={[styles.sevDot, { backgroundColor: sev.dot }]} />
-                    <Ionicons name={meta.icon as any} size={16} color={sev.dot} />
+                    <Ionicons name={sev.icon as any} size={18} color={sev.color} />
                   </View>
                   <View style={styles.alertMid}>
-                    <View style={styles.alertTitleRow}>
-                      <Text style={[styles.alertTitle, { color: sev.dot }]}>{alert.title}</Text>
-                      <Text style={styles.alertSev}>{sev.label}</Text>
-                    </View>
-                    {alert.description ? (
-                      <Text style={styles.alertDesc} numberOfLines={1}>{alert.description}</Text>
-                    ) : null}
+                    <Text style={[styles.alertTitle, { color: sev.color }]} numberOfLines={1}>{alert.title}</Text>
+                    {alert.description ? <Text style={styles.alertDesc} numberOfLines={1}>{alert.description}</Text> : null}
                   </View>
-                  <Ionicons name="chevron-forward" size={14} color="#9CA3AF" />
-                </Animated.View>
-              );
-            })}
-          </View>
-        ) : (
-          <View style={styles.empty}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="shield-checkmark" size={18} color="#2D8A4E" />
-            </View>
-            <Text style={styles.emptyText}>All clear — no active alerts</Text>
-          </View>
-        )}
-        <View style={styles.viewBtn}>
-          <Text style={styles.viewBtnText}>View All Alerts</Text>
-          <Ionicons name="chevron-forward" size={14} color="#2F5D50" />
+                  <Ionicons name="chevron-forward" size={14} color={sev.color} />
+                </TouchableOpacity>
+              </Animated.View>
+            );
+          })}
         </View>
-      </Animated.View>
-    </TouchableOpacity>
+      ) : (
+        <View style={styles.empty}>
+          <View style={[styles.emptyIcon, { backgroundColor: '#ECFDF5' }]}>
+            <Ionicons name="shield-checkmark" size={18} color="#059669" />
+          </View>
+          <Text style={styles.emptyText}>All clear — no active alerts</Text>
+        </View>
+      )}
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: radius.xl,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadows.sm,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
+  container: { borderRadius: radius.xl, padding: spacing.md, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3, elevation: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  iconBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: '#C0392B',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  title: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
-  countBadge: {
-    backgroundColor: '#C0392B',
-    borderRadius: radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 1,
-  },
+  iconBadge: { width: 26, height: 26, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  title: { fontSize: 16, fontWeight: '700' },
+  countBadge: { borderRadius: radius.pill, paddingHorizontal: 8, paddingVertical: 1 },
   countText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
+  viewAllText: { fontSize: 13, fontWeight: '600' },
   list: { gap: spacing.sm },
-  alertCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    gap: spacing.sm,
-  },
-  alertLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sevDot: { width: 4, height: 24, borderRadius: 2 },
+  alertCard: { flexDirection: 'row', alignItems: 'center', borderRadius: radius.md, padding: spacing.sm + 2, gap: spacing.sm },
+  alertLeft: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   alertMid: { flex: 1 },
-  alertTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   alertTitle: { fontSize: 13, fontWeight: '700' },
-  alertSev: { fontSize: 8, fontWeight: '800', color: '#9CA3AF', letterSpacing: 0.5 },
   alertDesc: { fontSize: 11, color: '#6B7280', marginTop: 1 },
-  empty: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    justifyContent: 'center',
-  },
-  emptyIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#ECFDF5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: { fontSize: 13, color: '#2D8A4E', fontWeight: '600' },
-  viewBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
-    marginTop: spacing.xs,
-    gap: 4,
-  },
-  viewBtnText: { fontSize: 13, fontWeight: '600', color: '#2F5D50' },
+  empty: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, justifyContent: 'center' },
+  emptyIcon: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { fontSize: 13, color: '#059669', fontWeight: '600' },
 });
 
 export default memo(AlertsSection);
