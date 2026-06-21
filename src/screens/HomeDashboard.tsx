@@ -1,266 +1,204 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform } from 'react-native';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Animated as RNAnimated } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
-import { Farm, IncomeRecord, Expense } from '../types';
+import { Farm } from '../types';
 import { useWeather } from '../hooks/useWeather';
-import { useLanguage } from '../i18n/LanguageContext';
+import { fetchMarketPrices } from '../services/marketService';
 import WeatherHero from '../components/WeatherHero';
+import SmartRecommendations from '../components/SmartRecommendations';
 import AlertsSection, { HomeAlert } from '../components/AlertsSection';
-import TodayPlanCard, { PlanTask } from '../components/TodayPlanCard';
-import FinanceSnapshotCard from '../components/FinanceSnapshotCard';
+import SmartReminderCard, { Reminder } from '../components/SmartReminderCard';
+import MarketPricesRow from '../components/MarketPricesRow';
 import { spacing } from '../theme';
 
-const TAB_BAR_HEIGHT = 68;
+const TAB_BAR_HEIGHT = 80;
 
-function getCurrentMonth() {
-  return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+function getFormattedDate() {
+  return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
-interface Props {
-  navigation: any;
-}
+const CROP_ICONS: Record<string, string> = {
+  rice: '🌾', wheat: '🌾', maize: '🌽', cotton: '🛡️', sugarcane: '🌿',
+  tomato: '🍅', onion: '🧅', potato: '🥔', groundnut: '🥜', chilli: '🌶️',
+  banana: '🍌', mango: '🥭', soybean: '🫘', sunflower: '🌻', coconut: '🥥',
+};
+
+interface Props { navigation: any }
 
 export default function HomeDashboard({ navigation }: Props) {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
-  const { t } = useLanguage();
   const [farms, setFarms] = useState<Farm[]>([]);
-  const [incomes, setIncomes] = useState<IncomeRecord[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [marketCrops, setMarketCrops] = useState<{ name: string; icon: string; price: number; unit: string; change: number; trend: 'up' | 'down' }[]>([]);
 
   const defaultFarm = farms[0];
   const weatherLocation = defaultFarm
     ? [defaultFarm.village, defaultFarm.district, defaultFarm.state].filter(Boolean).join(', ')
     : null;
   const { weather } = useWeather(weatherLocation || undefined, defaultFarm?.name);
+  const fadeAnim = useRef(new RNAnimated.Value(0)).current;
 
-  const fetchData = useCallback(async () => {
+  const loadMarketData = useCallback(async () => {
+    try {
+      const prices = await fetchMarketPrices({ limit: 10 });
+      if (prices.length > 0) {
+        setMarketCrops(prices.map(p => ({
+          name: p.crop,
+          icon: CROP_ICONS[p.crop.toLowerCase()] || '🌾',
+          price: p.priceNum,
+          unit: 'Quintal',
+          change: p.changeNum,
+          trend: (p.trend === 'up' ? 'up' : 'down') as 'up' | 'down',
+        })));
+      }
+    } catch {}
+  }, []);
+
+  const fetchFarms = useCallback(async () => {
     if (!user) return;
     try {
-      const [farmRes, incomeRes, expenseRes] = await Promise.all([
-        supabase.from('farms').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('income_records').select('*').eq('user_id', user.id).order('income_date', { ascending: false }),
-        supabase.from('expenses').select('*').eq('user_id', user.id).order('expense_date', { ascending: false }),
-      ]);
-      if (farmRes.data) setFarms(farmRes.data);
-      if (incomeRes.data) setIncomes(incomeRes.data);
-      if (expenseRes.data) setExpenses(expenseRes.data);
-    } catch {
-    } finally {
-      setRefreshing(false);
-    }
+      const { data } = await supabase.from('farms').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+      if (data) setFarms(data);
+    } catch {}
+    finally { setRefreshing(false); }
   }, [user]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  useEffect(() => {
-    navigation.setOptions({ headerShown: false });
-  }, [navigation]);
-
-  const monthIncomes = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    return incomes
-      .filter((i) => i.income_date >= start)
-      .reduce((sum, i) => sum + (i.amount || 0), 0);
-  }, [incomes]);
-
-  const monthExpenses = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    return expenses
-      .filter((e) => e.expense_date >= start)
-      .reduce((sum, e) => sum + (e.amount || 0), 0);
-  }, [expenses]);
-
-  const monthProfit = monthIncomes - monthExpenses;
+  useEffect(() => { fetchFarms(); loadMarketData(); }, [fetchFarms, loadMarketData]);
+  useEffect(() => { RNAnimated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start(); }, []);
 
   const alerts: HomeAlert[] = useMemo(() => {
     const list: HomeAlert[] = [];
+    const temp = weather.temperature || 30;
+    const cond = (weather.condition || '').toLowerCase();
+    if (temp > 38) list.push({ id: 'heat', type: 'heat_wave', title: 'Heat Wave Warning', description: `Temperature ${temp}°C expected`, severity: 'high', affectedFarm: defaultFarm?.name });
+    if (cond.includes('rain') || cond.includes('thunder')) list.push({ id: 'rain', type: 'heavy_rain', title: 'Heavy Rain Expected Tomorrow', description: 'Prepare drainage, delay irrigation', severity: 'critical', affectedFarm: defaultFarm?.name });
+    if (cond.includes('cyclone') || cond.includes('storm')) list.push({ id: 'cyclone', type: 'cyclone', title: 'Cyclone Warning', description: 'Secure equipment immediately', severity: 'critical', affectedFarm: defaultFarm?.name });
+    if (cond.includes('fog') || cond.includes('mist')) list.push({ id: 'fog', type: 'flood', title: 'Dense Fog Alert', description: 'Low visibility, drive carefully', severity: 'medium' });
+    if (cond.includes('pest') || defaultFarm?.current_crop === 'Cotton') list.push({ id: 'pest', type: 'pest', title: 'Pest Risk Warning', description: 'Aphids spotted in nearby farms', severity: 'high', affectedFarm: defaultFarm?.name });
+    return list;
+  }, [weather, defaultFarm]);
+
+  const reminders: Reminder[] = useMemo(() => {
+    const list: Reminder[] = [];
     const h = new Date().getHours();
     const isDay = h >= 6 && h < 18;
     const temp = weather.temperature || 30;
-    const cond = (weather.condition || '').toLowerCase();
-    if (temp > 38) {
-      list.push({
-        id: 'heat',
-        type: 'heat_wave',
-        title: 'Heat Wave Warning',
-        description: `Temperature ${temp}°C — take precautions`,
-        severity: 'high',
-      });
-    }
-    if (cond.includes('rain') || cond.includes('thunder')) {
-      list.push({
-        id: 'rain',
-        type: 'heavy_rain',
-        title: 'Heavy Rain Expected',
-        description: 'Prepare drainage and delay irrigation',
-        severity: 'critical',
-      });
-    }
-    if (cond.includes('fog') || cond.includes('mist')) {
-      list.push({
-        id: 'fog',
-        type: 'fog',
-        title: 'Dense Fog Alert',
-        description: 'Low visibility — drive carefully',
-        severity: 'medium',
-      });
-    }
-    if (isDay && temp > 35) {
-      list.push({
-        id: 'sun_alert',
-        type: 'heat',
-        title: 'High UV Index',
-        description: 'Use shade nets for sensitive crops',
-        severity: 'medium',
-      });
-    }
+    const rain = weather.rainChance || 0;
+    if (isDay && temp > 30 && rain < 40) list.push({ id: 'irrigate', icon: '💧', title: 'Irrigation Recommended Today', subtitle: 'Soil moisture levels dropping', color: '#3B82F6', bgColor: '#EFF6FF' });
+    list.push({ id: 'harvest', icon: '🌾', title: 'Harvest Window Opens In 3 Days', subtitle: 'Prepare for harvesting activity', color: '#2D8A4E', bgColor: '#ECFDF5' });
+    list.push({ id: 'fertilizer', icon: '🧪', title: 'Fertilizer Application Due This Week', subtitle: 'Apply NPK to active crops', color: '#D4872F', bgColor: '#FFF8F0' });
     return list;
   }, [weather]);
 
-  const tasks: PlanTask[] = useMemo(() => {
-    const list: PlanTask[] = [];
-    if (tempCropNeedsIrrigation(weather)) {
-      list.push({ id: 'irrigation', title: t('reminder.water'), completed: false });
-    }
-    list.push({ id: 'fertilizer', title: t('reminder.fertilizer'), completed: false });
-    list.push({ id: 'inspection', title: t('reminder.cropInspection'), completed: false });
-    if (monthExpenses === 0) {
-      list.push({ id: 'finance', title: 'Record monthly expenses', completed: false });
-    }
-    return list.slice(0, 4);
-  }, [weather, monthExpenses, t]);
-
   return (
     <View style={styles.wrapper}>
-      <Animated.ScrollView
-        entering={FadeInDown.duration(600)}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollInner,
-          { paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.lg },
-        ]}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => { setRefreshing(true); fetchData(); }}
-            tintColor="#1E6F50"
-          />
-        }
-      >
-        {/* Header */}
-        <Animated.View
-          entering={FadeInDown.duration(500).delay(100)}
-          style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}
+      <RNAnimated.View style={[styles.content, { opacity: fadeAnim, paddingTop: Math.max(insets.top, 12) }]}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.lg }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchFarms(); }} tintColor="#2F5D50" />}
         >
-          <View>
-            <Text style={styles.greeting}>
-              Boer
-            </Text>
-            <Text style={styles.greetingSub}>
-              Smart Farming App
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.profileBtn}
-            onPress={() => navigation.navigate('Profile')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="person-circle-outline" size={28} color="#1E6F50" />
-          </TouchableOpacity>
-        </Animated.View>
+          {/* Header */}
+          <Animated.View entering={FadeInDown.duration(500).delay(50)} style={styles.header}>
+            <View>
+              <Text style={styles.brandName}>BOER</Text>
+              <Text style={styles.brandSub}>Smart Farming Platform</Text>
+              <Text style={styles.date}>{getFormattedDate()}</Text>
+            </View>
+            <View style={styles.headerRight}>
+              <TouchableOpacity
+                style={styles.aiBtn}
+                onPress={() => navigation.navigate('AIHub')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="sparkles" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.avatarBtn} onPress={() => navigation.navigate('Profile')} activeOpacity={0.7}>
+                <Ionicons name="person-circle" size={42} color="#2F5D50" />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
 
-        {/* Section 1: Weather Hero */}
-        <Animated.View entering={FadeInDown.duration(500).delay(150)}>
+          {/* 1. Weather Card */}
           <WeatherHero
             temperature={weather.temperature || 30}
             condition={weather.condition || 'Sunny'}
             location={weather.location || ''}
+            farmName={defaultFarm?.name}
             humidity={weather.humidity || 65}
             windSpeed={weather.windSpeed || 12}
             rainChance={weather.rainChance || 10}
-            sunrise={weather.sunrise || '6:15 AM'}
-            sunset={weather.sunset || '6:45 PM'}
-            isDay={weather.isDay ?? true}
             forecast={weather.forecast || []}
           />
-        </Animated.View>
 
-        {/* Section 2: Alerts */}
-        <AlertsSection
-          alerts={alerts}
-          onViewAll={() => navigation.navigate('Ecosystem', { screen: 'AlertsTab' })}
-        />
+          {/* 2. Smart Recommendations */}
+          <SmartRecommendations
+            recommendations={[]}
+            onPress={(id) => {
+              if (id === 'irrigate' || id === 'harvest' || id === 'fertilizer') {
+                navigation.navigate('SmartReminder');
+              } else {
+                navigation.navigate('AlertHistory');
+              }
+            }}
+          />
 
-        {/* Section 3: Today's Plan */}
-        <TodayPlanCard
-          tasks={tasks}
-          onViewFull={() => navigation.navigate('Farms')}
-        />
+          {/* 3. Alert Center */}
+          <AlertsSection
+            alerts={alerts}
+            onViewAll={() => navigation.navigate('AlertHistory')}
+            onPress={() => navigation.navigate('AlertHistory')}
+          />
 
-        {/* Section 4: Finance Snapshot */}
-        <FinanceSnapshotCard
-          revenue={monthIncomes}
-          expenses={monthExpenses}
-          profit={monthProfit}
-          month={getCurrentMonth()}
-          onViewDetails={() => navigation.navigate('Finance')}
-        />
-      </Animated.ScrollView>
+          {/* 4. Smart Reminder */}
+          <SmartReminderCard
+            reminders={reminders}
+            onViewAll={() => navigation.navigate('SmartReminder')}
+            onPress={() => navigation.navigate('SmartReminder')}
+          />
+
+          {/* 5. Market Highlights */}
+          <MarketPricesRow
+            crops={marketCrops}
+            onViewAll={() => navigation.navigate('Market')}
+            onCropPress={(crop) => navigation.navigate('Market')}
+          />
+        </ScrollView>
+      </RNAnimated.View>
     </View>
   );
 }
 
-function tempCropNeedsIrrigation(weather: any): boolean {
-  const h = new Date().getHours();
-  const isDay = h >= 6 && h < 18;
-  const temp = weather.temperature || 30;
-  const rain = weather.rainChance || 0;
-  if (!isDay) return false;
-  if (rain > 60) return false;
-  if (temp > 32) return true;
-  return false;
-}
-
 const styles = StyleSheet.create({
-  wrapper: {
-    flex: 1,
-    backgroundColor: '#F7F8F6',
-  },
-  scrollInner: {
-    paddingHorizontal: spacing.md,
-  },
+  wrapper: { flex: 1, backgroundColor: '#F8F7F2' },
+  content: { flex: 1, paddingHorizontal: spacing.md },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: spacing.md,
   },
-  greeting: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    letterSpacing: -0.3,
-  },
-  greetingSub: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '500',
-    marginTop: 1,
-  },
-  profileBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F0F1EF',
+  brandName: { fontSize: 24, fontWeight: '800', color: '#2F5D50', letterSpacing: -0.5 },
+  brandSub: { fontSize: 12, color: '#708238', fontWeight: '600', marginTop: -1, letterSpacing: 0.2 },
+  date: { fontSize: 11, color: '#8B7355', fontWeight: '500', marginTop: 4 },
+  avatarBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  aiBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2F5D50',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#2F5D50',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

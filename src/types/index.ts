@@ -3,6 +3,10 @@ export type RootStackParamList = {
   Main: undefined;
   Onboarding: undefined;
   Profile: undefined;
+  AIHub: undefined;
+  AlertHistory: undefined;
+  SmartReminder: undefined;
+  MarketIntelligence: undefined;
 };
 
 export type AuthStackParamList = {
@@ -16,7 +20,7 @@ export type MainTabParamList = {
   Home: undefined;
   Farms: undefined;
   Finance: undefined;
-  AI: undefined;
+  Market: undefined;
   Ecosystem: undefined;
 };
 
@@ -39,13 +43,18 @@ export type FinanceStackParamList = {
 };
 
 export type AIStackParamList = {
+  AIHub: undefined;
   AIChat: undefined;
   DiseaseScanner: undefined;
   CropRecommendation: undefined;
+  IrrigationAdvisor: undefined;
+  FertilizerAdvisor: undefined;
+  SchemesAssistant: undefined;
+  SmartAlerts: undefined;
+  MarketAdvisor: undefined;
 };
 
 export type EcosystemTabParamList = {
-  MarketTab: undefined;
   SchemesTab: undefined;
   CommunityTab: undefined;
   LearnTab: undefined;
@@ -69,6 +78,7 @@ export type EcosystemStackParamList = {
 export type ProfileStackParamList = {
   ProfileMain: undefined;
   ProfileEdit: undefined;
+  Settings: undefined;
 };
 
 export interface CommunityPost {

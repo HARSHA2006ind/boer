@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, shadows } from '../../theme';
+import { fetchCommunityFeed } from '../../services/communityService';
+import { CommunityPost } from '../../types';
 
 const { width } = Dimensions.get('window');
 
@@ -14,29 +17,54 @@ const POST_TYPES = [
   { key: 'tip', label: 'Tips' },
 ];
 
-const FEED = [
-  { id: '1', farmer: 'Ramesh Kumar', village: 'Sangareddy', district: 'Sangareddy', time: '2h ago', type: 'success_story' as const, content: 'My cotton yield improved 40% this season using drip irrigation! So happy with the results. Thanks Boer for the advice 🌱', likes: 28, comments: 7, image: '' },
-  { id: '2', farmer: 'Lakshmi Devi', village: 'Guntur', district: 'Guntur', time: '4h ago', type: 'question' as const, content: 'My tomato plants have yellow spots on leaves. What should I apply? 📸', likes: 15, comments: 12, image: '' },
-  { id: '3', farmer: 'Venkatesh Rao', village: 'Warangal', district: 'Warangal', time: '6h ago', type: 'pest_alert' as const, content: '⚠️ Fall Armyworm spotted in Warangal region! Check your maize crops immediately. Apply recommended pesticides.', likes: 45, comments: 23, image: '' },
-  { id: '4', farmer: 'Priya Sharma', village: 'Nashik', district: 'Nashik', time: '8h ago', type: 'tip' as const, content: 'Tip: Apply neem oil 5% solution weekly to prevent pest attacks. Works great for vegetables! 🥬', likes: 32, comments: 5, image: '' },
-  { id: '5', farmer: 'Surya Prakash', village: 'Khammam', district: 'Khammam', time: '12h ago', type: 'success_story' as const, content: 'Switched to organic farming 2 years ago. Now my soil is healthier and profits are better. Best decision ever! 🌾✨', likes: 56, comments: 18, image: '' },
-  { id: '6', farmer: 'Anjali Reddy', village: 'Kurnool', district: 'Kurnool', time: '1d ago', type: 'question' as const, content: 'Best fertilizer for groundnut in sandy soil? Please suggest 🙏', likes: 11, comments: 9, image: '' },
-];
-
 interface Props { navigation: any }
 
 export default function CommunityFeedScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [activeType, setActiveType] = useState('all');
   const [liked, setLiked] = useState<string[]>([]);
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = activeType === 'all' ? FEED : FEED.filter(p => p.type === activeType);
+  const loadPosts = useCallback(async () => {
+    setLoading(true);
+    const data = await fetchCommunityFeed(activeType);
+    setPosts(data);
+    setLoading(false);
+  }, [activeType]);
+
+  useEffect(() => { loadPosts(); }, [loadPosts]);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', loadPosts);
+    return unsubscribe;
+  }, [navigation, loadPosts]);
+
+  const filtered = posts;
 
   const toggleLike = (id: string) => {
     setLiked(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  const getTimeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const getBadge = (type: string) => {
+    if (type === 'pest_alert') return <View style={styles.alertBadge}><Text style={styles.alertBadgeText}>Alert</Text></View>;
+    if (type === 'success_story') return <View style={styles.storyBadge}><Text style={styles.storyBadgeText}>Story</Text></View>;
+    if (type === 'question') return <View style={styles.qBadge}><Text style={styles.qBadgeText}>Q&A</Text></View>;
+    if (type === 'tip') return <View style={styles.tipBadge}><Text style={styles.tipBadgeText}>Tip</Text></View>;
+    return null;
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.typeScroll} contentContainerStyle={styles.typeContent}>
         {POST_TYPES.map(pt => {
           const active = activeType === pt.key;
@@ -51,50 +79,53 @@ export default function CommunityFeedScreen({ navigation }: Props) {
         </TouchableOpacity>
       </ScrollView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.feed}>
-        {filtered.map(post => {
-          const isLiked = liked.includes(post.id);
-          return (
-            <TouchableOpacity key={post.id} style={styles.postCard} activeOpacity={0.95}
-              onPress={() => navigation.navigate('PostDetail', { postId: post.id })}>
-              <View style={styles.postHeader}>
-                <View style={styles.avatar}>
-                  <Ionicons name="person-circle" size={36} color={colors.primary} />
+      {loading ? (
+        <View style={styles.loadingContainer}><ActivityIndicator size="large" color={colors.primary} /></View>
+      ) : (
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.feed, { paddingBottom: insets.bottom + spacing.xxl }]}>
+          {filtered.map(post => {
+            const isLiked = liked.includes(post.id);
+            return (
+              <TouchableOpacity key={post.id} style={styles.postCard} activeOpacity={0.95}
+                onPress={() => navigation.navigate('PostDetail', { postId: post.id })}>
+                <View style={styles.postHeader}>
+                  <View style={styles.avatar}>
+                    <Ionicons name="person-circle" size={36} color={colors.primary} />
+                  </View>
+                  <View style={styles.postMeta}>
+                    <Text style={styles.farmerName}>{post.farmer_name || 'Farmer'}</Text>
+                    <Text style={styles.farmerLoc}>{post.village ? `${post.village}, ${post.district}` : post.district} · {getTimeAgo(post.created_at)}</Text>
+                  </View>
+                  {getBadge(post.post_type)}
                 </View>
-                <View style={styles.postMeta}>
-                  <Text style={styles.farmerName}>{post.farmer}</Text>
-                  <Text style={styles.farmerLoc}>{post.village}, {post.district} · {post.time}</Text>
-                </View>
-                {post.type === 'pest_alert' && <View style={styles.alertBadge}><Text style={styles.alertBadgeText}>⚠️ Alert</Text></View>}
-                {post.type === 'success_story' && <View style={styles.storyBadge}><Text style={styles.storyBadgeText}>🌟 Story</Text></View>}
-                {post.type === 'question' && <View style={styles.qBadge}><Text style={styles.qBadgeText}>❓ Q&A</Text></View>}
-              </View>
 
-              <Text style={styles.postContent}>{post.content}</Text>
+                <Text style={styles.postContent}>{post.content}</Text>
 
-              <View style={styles.postActions}>
-                <TouchableOpacity style={styles.actionBtn} onPress={() => toggleLike(post.id)}>
-                  <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={18} color={isLiked ? colors.danger : colors.textSecondary} />
-                  <Text style={styles.actionText}>{post.likes + (isLiked ? 1 : 0)}</Text>
-                </TouchableOpacity>
-                <View style={styles.actionBtn}>
-                  <Ionicons name="chatbubble-outline" size={16} color={colors.textSecondary} />
-                  <Text style={styles.actionText}>{post.comments}</Text>
+                <View style={styles.postActions}>
+                  <TouchableOpacity style={styles.actionBtn} onPress={() => toggleLike(post.id)}>
+                    <Ionicons name={isLiked ? 'heart' : 'heart-outline'} size={18} color={isLiked ? colors.danger : colors.textSecondary} />
+                    <Text style={styles.actionText}>{post.likes_count + (isLiked ? 1 : 0)}</Text>
+                  </TouchableOpacity>
+                  <View style={styles.actionBtn}>
+                    <Ionicons name="chatbubble-outline" size={16} color={colors.textSecondary} />
+                    <Text style={styles.actionText}>{post.comments_count}</Text>
+                  </View>
+                  <TouchableOpacity style={styles.actionBtn}>
+                    <Ionicons name="share-outline" size={16} color={colors.textSecondary} />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity style={styles.actionBtn}>
-                  <Ionicons name="share-outline" size={16} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   typeScroll: { maxHeight: 48, marginBottom: spacing.sm },
   typeContent: { paddingHorizontal: spacing.md, alignItems: 'center', gap: spacing.sm },
   typeChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
@@ -115,6 +146,8 @@ const styles = StyleSheet.create({
   storyBadgeText: { fontSize: 10, fontWeight: '700', color: '#92400E' },
   qBadge: { backgroundColor: '#DBEAFE', borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
   qBadgeText: { fontSize: 10, fontWeight: '700', color: '#1E40AF' },
+  tipBadge: { backgroundColor: '#D1FAE5', borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  tipBadgeText: { fontSize: 10, fontWeight: '700', color: '#065F46' },
   postContent: { fontSize: 14, lineHeight: 20, color: colors.text, fontWeight: '500', marginBottom: spacing.md },
   postActions: { flexDirection: 'row', gap: spacing.lg, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },

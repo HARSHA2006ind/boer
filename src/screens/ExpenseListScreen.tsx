@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Expense } from '../types';
 import { getExpenses, deleteExpense, EXPENSE_CATEGORIES } from '../services/expenseService';
 import { colors, spacing, radius, shadows } from '../theme';
@@ -19,6 +20,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function ExpenseListScreen({ navigation, route }: Props) {
   const farmId = route.params?.farmId;
+  const insets = useSafeAreaInsets();
   const [expenses, setExpenses] = useState<(Expense & { farms: { name: string } })[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,9 +41,9 @@ export default function ExpenseListScreen({ navigation, route }: Props) {
   if (loading) return <Loading fullScreen />;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <FlatList
-        data={expenses} keyExtractor={i => i.id} contentContainerStyle={styles.list}
+        data={expenses} keyExtractor={i => i.id} contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + spacing.xxl }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetch(); }} tintColor={colors.primary} />}
         ListHeaderComponent={
           <View>

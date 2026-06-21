@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage, LANGUAGES as I18N_LANGUAGES } from '../i18n/LanguageContext';
 import { supabase } from '../services/supabase';
@@ -27,6 +28,7 @@ interface Props { navigation: any }
 export default function ProfileEditScreen({ navigation }: Props) {
   const { user } = useAuth();
   const { language: i18nLang, setLanguage: setI18nLang, t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const m = user?.user_metadata || {};
   const [fullName, setFullName] = useState(m.full_name || '');
   const [mobileNumber, setMobileNumber] = useState(m.mobile_number || '');
@@ -63,7 +65,7 @@ export default function ProfileEditScreen({ navigation }: Props) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>{t('profile.edit')}</Text>
         <Text style={styles.subtitle}>Update your personal information</Text>
 

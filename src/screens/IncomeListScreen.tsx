@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IncomeRecord } from '../types';
-import { getIncomeRecords, deleteIncomeRecord } from '../services/incomeService';
+import { getIncomeRecords, deleteIncomeRecord } from '../services/expenseService';
 import { colors, spacing, radius } from '../theme';
 import Card from '../components/Card';
 import Loading from '../components/Loading';
@@ -13,6 +14,7 @@ interface Props { navigation: any; route: any }
 
 export default function IncomeListScreen({ navigation, route }: Props) {
   const farmId = route.params?.farmId;
+  const insets = useSafeAreaInsets();
   const [records, setRecords] = useState<(IncomeRecord & { farms: { name: string } })[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,9 +35,9 @@ export default function IncomeListScreen({ navigation, route }: Props) {
   if (loading) return <Loading fullScreen />;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <FlatList
-        data={records} keyExtractor={i => i.id} contentContainerStyle={styles.list}
+        data={records} keyExtractor={i => i.id} contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + spacing.xxl }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetch(); }} tintColor={colors.primary} />}
         ListHeaderComponent={
           <View>

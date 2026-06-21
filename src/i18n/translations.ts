@@ -231,6 +231,8 @@ export const translations: Translations = {
     'nav.home': 'Home',
     'nav.ecosystem': 'Ecosystem',
     'nav.profile': 'Profile',
+    'nav.market': 'Market',
+    'nav.account': 'Account',
     'eco.market_prices': 'Market',
     'eco.schemes': 'Schemes',
     'eco.community': 'Community',

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import { getExpense, createExpense, updateExpense, EXPENSE_CATEGORIES } from '../services/expenseService';
@@ -14,6 +15,7 @@ interface Props { navigation: any; route: any }
 export default function ExpenseFormScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const { expenseId, farmId: paramFarmId } = route.params || {};
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -43,7 +45,7 @@ export default function ExpenseFormScreen({ navigation, route }: Props) {
   if (fetching) return <Loading fullScreen />;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{expenseId ? t('expense.edit') : t('expense.add')}</Text>
 
       <Text style={styles.label}>{t('expense.farm')}</Text>

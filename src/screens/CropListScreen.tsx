@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { getCrops } from '../services/cropService';
 import { Crop } from '../types';
@@ -13,6 +14,7 @@ interface Props { navigation: any; route: any }
 export default function CropListScreen({ navigation, route }: Props) {
   const { farmId } = route.params;
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -29,7 +31,7 @@ export default function CropListScreen({ navigation, route }: Props) {
   if (loading) return <Loading fullScreen />;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}
+    <ScrollView style={[styles.container, { paddingTop: insets.top }]} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetch(); }} tintColor={colors.primary} />}
     >
       <Text style={styles.title}>Crop Diary</Text>

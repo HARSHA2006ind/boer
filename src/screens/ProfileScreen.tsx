@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n/LanguageContext';
+import { useConnectivityContext } from '../contexts/ConnectivityContext';
 import { signOut } from '../services/authService';
 import { colors, spacing, radius, shadows } from '../theme';
 
@@ -11,6 +12,7 @@ interface Props { navigation: any }
 
 const SETTINGS = [
   { icon: 'person-outline', label: 'Edit Profile', color: '#3B82F6', screen: 'ProfileEdit' },
+  { icon: 'settings-outline', label: 'Settings', color: '#6B7280', screen: 'Settings' },
   { icon: 'notifications-outline', label: 'Notifications', color: '#F59E0B' },
   { icon: 'language-outline', label: 'Language', color: colors.primary },
   { icon: 'lock-closed-outline', label: 'Privacy', color: '#6B7280' },
@@ -24,7 +26,19 @@ export default function ProfileScreen({ navigation }: Props) {
   const { t, language, setLanguage } = useLanguage();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
+  const { status, pendingSyncCount, lastSyncTime } = useConnectivityContext();
   const m = user?.user_metadata || {};
+
+  const statusDot = status === 'online' ? '🟢' : status === 'syncing' ? '🟡' : '🔴';
+  const statusLabel = status === 'online' ? 'Online' : status === 'syncing' ? 'Syncing...' : 'Offline';
+  const lastSyncLabel = lastSyncTime
+    ? `Today ${lastSyncTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+    : 'Never';
+
+  const handlePress = (item: typeof SETTINGS[0]) => {
+    if (item.screen) { navigation.navigate(item.screen); return; }
+    Alert.alert('Coming Soon', `${item.label} will be available in the next update.`);
+  };
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure?', [
@@ -39,17 +53,29 @@ export default function ProfileScreen({ navigation }: Props) {
         {/* Profile Header */}
         <View style={styles.profileCard}>
           <View style={styles.avatarWrap}>
-            <Ionicons name="person-circle" size={72} color={colors.primary} />
+            <Ionicons name="person-circle" size={84} color={colors.primary} />
           </View>
           <Text style={styles.name}>{m.full_name || 'Farmer'}</Text>
           <Text style={styles.email}>{user?.email || ''}</Text>
+        </View>
+
+        {/* Sync Status */}
+        <View style={styles.syncCard}>
+          <View style={styles.syncRow}>
+            <Text style={styles.syncLabel}>{statusDot} {statusLabel}</Text>
+            <Text style={styles.syncValue}>{pendingSyncCount > 0 ? `${pendingSyncCount} pending` : 'All synced'}</Text>
+          </View>
+          <View style={styles.syncRow}>
+            <Text style={styles.syncLabel}>Last Sync</Text>
+            <Text style={styles.syncValue}>{lastSyncLabel}</Text>
+          </View>
         </View>
 
         {/* Settings List */}
         <View style={styles.settingsCard}>
           {SETTINGS.map((item, i) => (
             <TouchableOpacity key={i} style={[styles.row, i < SETTINGS.length - 1 && styles.rowBorder]}
-              onPress={() => { if (item.screen) navigation.navigate(item.screen); }}>
+               onPress={() => handlePress(item)}>
               <View style={[styles.rowIcon, { backgroundColor: item.color + '15' }]}>
                 <Ionicons name={item.icon as any} size={20} color={item.color} />
               </View>
@@ -74,10 +100,14 @@ export default function ProfileScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md },
-  profileCard: { alignItems: 'center', paddingVertical: spacing.xl, marginBottom: spacing.lg },
+  profileCard: { alignItems: 'center', paddingVertical: spacing.xl, marginBottom: spacing.md },
   avatarWrap: { marginBottom: spacing.md },
   name: { fontSize: 24, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
   email: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  syncCard: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.md, marginBottom: spacing.lg, ...shadows.sm },
+  syncRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.xs },
+  syncLabel: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
+  syncValue: { fontSize: 13, color: colors.text, fontWeight: '600' },
   settingsCard: { backgroundColor: colors.surface, borderRadius: radius.xl, overflow: 'hidden', marginBottom: spacing.xl, ...shadows.sm },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md + 2, paddingHorizontal: spacing.md },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },

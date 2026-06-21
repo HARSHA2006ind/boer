@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
-import { getIncomeRecord, createIncomeRecord, updateIncomeRecord } from '../services/incomeService';
+import { getIncomeRecord, createIncomeRecord, updateIncomeRecord } from '../services/expenseService';
 import { colors, radius, spacing } from '../theme';
 import Button from '../components/Button';
 import Loading from '../components/Loading';
@@ -18,6 +19,7 @@ interface Props { navigation: any; route: any }
 export default function IncomeFormScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
   const { incomeId, farmId: paramFarmId } = route.params || {};
   const [cropName, setCropName] = useState('');
   const [amount, setAmount] = useState('');
@@ -49,7 +51,7 @@ export default function IncomeFormScreen({ navigation, route }: Props) {
   if (fetching) return <Loading fullScreen />;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{incomeId ? t('income.edit') : t('income.add')}</Text>
 
       <Text style={styles.label}>{t('income.farm')}</Text>

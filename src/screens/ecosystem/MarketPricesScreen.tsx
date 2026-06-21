@@ -46,7 +46,7 @@ export default function MarketPricesScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={[styles.container]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.headerRow}>
         <TextInput style={styles.searchInput} placeholder="Search crops..." placeholderTextColor={colors.textLight}
           value={search} onChangeText={setSearch} />

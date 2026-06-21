@@ -5,7 +5,6 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { EcosystemTabParamList, EcosystemStackParamList } from '../types';
-import MarketPricesScreen from '../screens/ecosystem/MarketPricesScreen';
 import GovernmentSchemesScreen from '../screens/ecosystem/GovernmentSchemesScreen';
 import CommunityFeedScreen from '../screens/ecosystem/CommunityFeedScreen';
 import KnowledgeCenterScreen from '../screens/ecosystem/KnowledgeCenterScreen';
@@ -25,7 +24,6 @@ const Tab = createMaterialTopTabNavigator<EcosystemTabParamList>();
 const Stack = createNativeStackNavigator<EcosystemStackParamList>();
 
 const SUB_TABS = [
-  { key: 'MarketTab', label: 'market_prices', icon: 'trending-up' as const },
   { key: 'SchemesTab', label: 'schemes', icon: 'shield-checkmark' as const },
   { key: 'CommunityTab', label: 'community', icon: 'people' as const },
   { key: 'LearnTab', label: 'learn', icon: 'book' as const },
@@ -59,7 +57,6 @@ function EcosystemTabs() {
     <View style={{ flex: 1, paddingTop: insets.top }}>
       <Tab.Navigator tabBar={props => <CustomTabBar {...props} />}
         screenOptions={{ swipeEnabled: true, lazy: true }}>
-        <Tab.Screen name="MarketTab" component={MarketPricesScreen} />
         <Tab.Screen name="SchemesTab" component={GovernmentSchemesScreen} />
         <Tab.Screen name="CommunityTab" component={CommunityFeedScreen} />
         <Tab.Screen name="LearnTab" component={KnowledgeCenterScreen} />

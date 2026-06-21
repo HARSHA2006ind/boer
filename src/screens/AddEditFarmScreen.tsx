@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import { colors, radius, spacing } from '../theme';
@@ -15,6 +16,7 @@ interface Props { navigation: any; route: any }
 
 export default function AddEditFarmScreen({ navigation, route }: Props) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const farmId = route.params?.farmId;
   const [name, setName] = useState('');
   const [country, setCountry] = useState('IN');
@@ -82,7 +84,7 @@ export default function AddEditFarmScreen({ navigation, route }: Props) {
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>{farmId ? 'Edit Farm' : 'Add New Farm'}</Text>
         <Text style={styles.subtitle}>Enter your farm details below</Text>
 

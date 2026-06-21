@@ -3,464 +3,341 @@ import {
   IrrigationInput, IrrigationAdvice,
   FertilizerInput, FertilizerAdvice,
   DiseaseResult, WeatherInterpretationInput, DailySummaryContext,
+  SmartAlert, MarketAdviceInput, MarketAdviceResult, FarmAlertContext,
 } from './aiProvider';
 
-export interface GeminiConfig {
-  apiKey: string;
-  model?: string;
+const API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
+const MODEL = 'gemini-2.0-flash';
+const BASE_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+
+async function callGemini(systemPrompt: string, userPrompt: string, image?: { base64: string; mimeType: string }): Promise<string> {
+  if (!API_KEY) {
+    return 'CONFIG_ERROR:Please set EXPO_PUBLIC_GEMINI_API_KEY in your .env file to use AI features.';
+  }
+
+  const parts: any[] = [{ text: userPrompt }];
+  if (image) {
+    parts.push({ inlineData: { mimeType: image.mimeType, data: image.base64 } });
+  }
+
+  const body = {
+    contents: [{ role: 'user', parts }],
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    generationConfig: { temperature: 0.4, maxOutputTokens: 2048, topP: 0.9 },
+  };
+
+  const res = await fetch(BASE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-goog-api-key': API_KEY },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini API error ${res.status}: ${errText}`);
+  }
+
+  const json = await res.json();
+  const text = json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return text;
 }
 
-const FARMING_KEYWORDS = [
-  'crop', 'farm', 'agriculture', 'soil', 'water', 'irrigation', 'fertilizer', 'pest', 'disease',
-  'harvest', 'plant', 'seed', 'weed', 'organic', 'compost', 'manure', 'weather', 'rain', 'drought',
-  'flood', 'yield', 'income', 'expense', 'profit', 'market', 'price', 'mandi', 'government', 'scheme',
-  'subsidy', 'loan', 'insurance', 'paddy', 'rice', 'wheat', 'maize', 'corn', 'cotton', 'sugarcane',
-  'vegetable', 'fruit', 'coconut', 'groundnut', 'sunflower', 'soybean', 'tomato', 'onion', 'potato',
-  'chilli', 'turmeric', 'ginger', 'banana', 'mango', 'grape', 'fertiliser', 'nutrient', 'nitrogen',
-  'phosphorus', 'potassium', 'npk', 'organic farming', 'natural farming', 'zero budget', 'mulching',
-  'drip', 'sprinkler', 'borewell', 'well', 'canal', 'tractor', 'plough', 'harrow', 'cultivator',
-  'harvesting', 'threshing', 'winnowing', 'sowing', 'transplanting', 'pruning', 'grafting', 'pH',
-  'neem', 'bio', 'fungicide', 'insecticide', 'herbicide', 'weedicide', 'micronutrient', 'vermicompost',
-  'green manure', 'cover crop', 'mulch', 'polyhouse', 'greenhouse', 'shednet', 'shade net',
-  'kharif', 'rabi', 'zaid', 'monsoon', 'pre-monsoon', 'post-monsoon', 'hail', 'frost', 'heat wave',
-  'cold wave', 'relative humidity', 'evapotranspiration', 'panchayat', 'mandal', 'block', 'district',
-  'agriculture officer', 'extension', 'kvk', 'krishi vigyan kendra', 'soil testing', 'seed treatment',
-  'nursery', 'seedling', 'transplanting', 'direct sowing', 'broadcasting', 'line sowing', 'drilling',
-  'intercropping', 'mixed cropping', 'rotation', 'multiple cropping', 'relay cropping',
-  'agroforestry', 'silviculture', 'horticulture', 'floriculture', 'sericulture', 'apiculture',
-  'pisciculture', 'duckery', 'goat farming', 'dairy', 'poultry', 'sheep farming', 'pig farming',
-];
-
-function isFarmingRelated(text: string): boolean {
-  const lower = text.toLowerCase();
-  return FARMING_KEYWORDS.some(k => lower.includes(k));
-}
-
-function generateFarmingResponse(text: string, context?: string): string {
-  const lower = text.toLowerCase();
-
-  if (context) {
-    return generateContextualResponse(text, context);
-  }
-
-  if (!isFarmingRelated(text)) {
-    return '🌾 I am Boer AI, designed specifically to help with farming and agricultural activities. Please ask me about crops, weather, soil, irrigation, or any farming-related topic.';
-  }
-
-  if (lower.includes('hello') || lower.includes('hi') || lower.includes('hey') || lower.includes('good')) {
-    return '👋 Hello! I\'m Boer AI, your farming assistant. How can I help you today? You can ask about crops, pests, weather, soil, irrigation, fertilizers, government schemes, or any agricultural topic.';
-  }
-
-  if (lower.includes('rice') || lower.includes('paddy')) {
-    return '🌾 **Rice (Paddy) Cultivation**\n\n• Best Soil: Clay loam with good water retention\n• Season: Kharif (June-November) / Rabi (Nov-March)\n• Temperature: 20-37°C\n• Rainfall: 100-200 cm\n• Popular varieties: Samba Masuri, BPT 5204, Swarna, MTU 7029\n• NPK: 60:30:30 kg/ha\n• Water depth: 5-10 cm during growth\n\n💧 Water requirement: 1200-1500 mm per season\n⏱️ Duration: 120-150 days\n💰 Expected yield: 5-6 tonnes/ha';
-  }
-
-  if (lower.includes('wheat')) {
-    return '🌾 **Wheat Cultivation**\n\n• Best Soil: Well-drained loamy soil, pH 6-7.5\n• Season: Rabi (October-December)\n• Temperature: 15-25°C\n• Popular varieties: HD 2967, PBW 343, GW 366\n• NPK: 60:30:30 kg/ha\n• Irrigation: 4-6 times during season\n• Seed rate: 100-125 kg/ha\n\n⏱️ Duration: 110-130 days\n💰 Expected yield: 3-5 tonnes/ha';
-  }
-
-  if (lower.includes('cotton')) {
-    return '🛡️ **Cotton Cultivation**\n\n• Best Soil: Black cotton soil, deep well-drained\n• Season: Kharif (May-June)\n• Temperature: 21-30°C\n• Popular varieties: Bunny, Mallika, RCH 659\n• NPK: 80:40:40 kg/ha\n\n**Pest Control:**\n• For bollworms: Use neem oil 5% spray\n• For sucking pests: Apply imidacloprid\n• Regular monitoring recommended\n\n⚠️ **Common diseases:** Fusarium wilt, Root rot\n⏱️ Duration: 150-180 days';
-  }
-
-  if (lower.includes('irrigation') || lower.includes('watering') || lower.includes('water today')) {
-    return '💧 **Irrigation Advice**\n\n• Check soil moisture before irrigating\n• Most crops need 2-3 cm of water per week\n• **Drip irrigation** saves 30-50% water\n• Best time: Early morning or evening\n• Avoid irrigation during rainfall\n\n🌧️ If rain is forecast >70%, delay irrigation.\n☀️ In summer, irrigate every 3-4 days.\n🌤️ In winter, irrigate every 7-10 days.';
-  }
-
-  if (lower.includes('weather') || lower.includes('rain') || lower.includes('climate') || lower.includes('forecast')) {
-    return '⛅ **Weather Interpretation for Farming**\n\n• **Clear skies:** Good for spraying pesticides\n• **Rain expected:** Delay irrigation and fertilizer application\n• **High humidity (>80%):** Risk of fungal diseases. Apply preventive fungicide.\n• **Strong winds:** Avoid spraying. Check for lodging in standing crops.\n• **Heat wave:** Provide extra irrigation to prevent moisture stress.\n\n🌡️ Optimal planting temp: 18-25°C for most crops.';
-  }
-
-  if (lower.includes('fertilizer') || lower.includes('compost') || lower.includes('manure') || lower.includes('npk')) {
-    return '🧪 **Fertilizer Recommendation**\n\n• Balanced NPK (10-26-26) at sowing for most crops\n• Apply nitrogen in 2-3 split doses\n• Organic compost: 10-15 tonnes/ha improves soil health\n• **Green manuring** with dhanicha/sunn hemp recommended\n\n🌱 **Organic alternatives:**\n• Vermicompost @ 5 tonnes/ha\n• Neem cake @ 250 kg/ha\n• Bio-fertilizers (Azospirillum, Phosphobacteria)\n\n⚠️ *Always consult local agricultural experts before applying fertilizers.*';
-  }
-
-  if (lower.includes('soil') || lower.includes('loamy') || lower.includes('clay') || lower.includes('sandy') || lower.includes('laterite')) {
-    return '🌱 **Soil Management Guide**\n\n• **Loamy soil:** Best for most crops. Good drainage, ideal pH 6-7.\n• **Clay soil:** Good for paddy. Needs proper drainage. Add organic matter.\n• **Sandy soil:** Needs frequent irrigation and organic matter. Mulching recommended.\n• **Laterite soil:** Add lime to reduce acidity. Use phosphate fertilizers.\n• **Black cotton soil:** Ideal for cotton. Swells when wet, cracks when dry.\n\n🧪 Get soil tested every 2 years. Apply amendments based on test results.';
-  }
-
-  if (lower.includes('pest') || lower.includes('insect') || lower.includes('bug') || lower.includes('spray') || lower.includes('infest')) {
-    return '🐛 **Pest Management (IPM)**\n\n• **Prevention:** Healthy soil, resistant varieties, proper spacing\n• **Monitoring:** Inspect crops weekly for early signs\n• **Biological:** Use neem oil, Bacillus thuringiensis, Trichoderma\n• **Chemical:** Last resort - consult agri extension officer\n\n**For specific pests:**\n• Fruit borer: Spray neem oil 5% weekly\n• Aphids/Jassids: Apply imidacloprid\n• Whitefly: Yellow sticky traps + neem spray\n• Thrips: Spray azadirachtin\n\n🌿 Organic control is always preferred for long-term soil health.';
-  }
-
-  if (lower.includes('harvest') || lower.includes('storage') || lower.includes('post-harvest') || lower.includes('post harvest')) {
-    return '🌾 **Harvest & Post-Harvest Management**\n\n• Harvest at correct maturity (90-95% grain ripening)\n• Dry grains to 14% moisture before storage\n• Use hermetic bags or metal bins for pest-free storage\n• Clean storage area before new crop arrival\n• Add neem leaves for natural pest repellent\n• Grading & sorting improves market price\n\n💰 Proper post-harvest handling reduces losses by 10-15%.';
-  }
-
-  if (lower.includes('subsidy') || lower.includes('scheme') || lower.includes('government') || lower.includes('pm')) {
-    return '🏛️ **Government Agriculture Schemes**\n\n**1. PM-KISAN (Pradhan Mantri Kisan Samman Nidhi)**\n• ₹6,000/year to all farmers in 3 installments\n• Direct bank transfer\n\n**2. PMFBY (Pradhan Mantri Fasal Bima Yojana)**\n• Crop insurance with 2% premium for Kharif\n• 1.5% for Rabi\n• Covers all natural calamities\n\n**3. Soil Health Card Scheme**\n• Free soil testing\n• Customized fertilizer recommendations\n\n**4. Kisan Credit Card (KCC)**\n• Loan at 7% interest\n• Up to ₹3 lakh without collateral\n\nContact your local agriculture office or visit pmkisan.gov.in for details.';
-  }
-
-  if (lower.includes('tomato') || lower.includes('vegetable') || lower.includes('brinjal') || lower.includes('chilli')) {
-    return '🍅 **Vegetable Cultivation Guide**\n\n• **Tomato:** pH 6-7, stakes required. Harvest 65-80 days.\n• **Brinjal:** Well-drained soil. Harvest 70-90 days.\n• **Chilli:** Sandy loam. Harvest 70-100 days.\n• **Onion:** Loose soil. Harvest 100-140 days.\n• **Potato:** Cool climate. Harvest 80-120 days.\n\n**Common pests:**\n• Fruit borer: Neem oil weekly\n• Aphids: Imidacloprid spray\n• Leaf miner: Remove affected leaves\n\n💰 Vegetables give 3-4x returns compared to grains per acre.';
-  }
-
-  if (lower.includes('mango') || lower.includes('fruit') || lower.includes('banana') || lower.includes('grape')) {
-    return '🥭 **Fruit Cultivation Guide**\n\n**Mango:**\n• Planting: June-July\n• Varieties: Alphonso, Banganapalli, Totapuri\n• Flowering: Dec-Jan, Harvest: April-June\n• Disease: Powdery mildew (sulfur spray)\n\n**Banana:**\n• Planting: June-September\n• Duration: 12-14 months\n• Drip irrigation recommended\n\n**Grape:**\n• Planting: Jan-Feb\n• Requires training and pruning\n• Drip irrigation essential\n\n💰 High initial investment but profitable long-term.';
-  }
-
-  if (lower.includes('sugarcane') || lower.includes('sugar')) {
-    return '🎋 **Sugarcane Cultivation**\n\n• Planting: Jan-Feb (spring) or Oct-Nov (autumn)\n• Soil: Deep well-drained loam, pH 6.5-7.5\n• Setts: Use 3-bud setts at 75,000/ha\n• NPK: 250:80:120 kg/ha\n• Irrigation: 20-25 times during season\n• Harvest: 10-12 months\n• Ratooning: 2-3 years possible\n\n💰 Expected yield: 80-100 tonnes/ha\n⏱️ Duration: 10-12 months';
-  }
-
-  if (lower.includes('groundnut') || lower.includes('peanut') || lower.includes('moong') || lower.includes('pulses')) {
-    return '🥜 **Pulse & Oilseed Guide**\n\n**Groundnut:**\n• Sandy loam, pH 6-7.5\n• Kharif (June-July) / Rabi (Nov-Dec)\n• Duration: 100-130 days\n• Yield: 2-3 tonnes/ha\n\n**Moong (Green Gram):**\n• All soil types\n• Kharif / Rabi / Summer\n• Duration: 65-75 days\n• Good for soil fertility (nitrogen fixation)\n\n**Other pulses:**\n• Black gram, Red gram, Chickpea\n• Intercropping recommended\n• Low water requirement';
-  }
-
-  if (lower.includes('disease') || lower.includes('blight') || lower.includes('wilt') || lower.includes('rust') || lower.includes('mildew') || lower.includes('leaf spot')) {
-    return '🩺 **Common Crop Diseases**\n\n**Fungal Diseases:**\n• Powdery Mildew: Sulfur spray, neem oil\n• Downy Mildew: Metalaxyl, remove infected leaves\n• Rust: Mancozeb spray, resistant varieties\n• Blast in Rice: Tricyclazole, avoid excess nitrogen\n\n**Bacterial Diseases:**\n• Bacterial Blight: Copper fungicide, resistant seeds\n• Wilt: Remove infected plants, soil solarization\n\n**Viral Diseases:**\n• Leaf Curl: Control whitefly vector\n• Mosaic: Remove infected plants\n\n✅ Prevention: Healthy seeds, crop rotation, proper spacing.';
-  }
-
-  if (lower.includes('organic') || lower.includes('natural farming') || lower.includes('zero budget')) {
-    return '🌿 **Organic & Natural Farming**\n\n**Key Practices:**\n• Composting: Use farm waste + cow dung\n• Vermicompost: Earthworm cultivation\n• Green Manuring: Sunn hemp, dhanicha\n• Mulching: Crop residue, plastic mulch\n\n**Natural Pest Control:**\n• Neem oil 5% spray\n• Garlic-chilli extract\n• Cow urine + neem leaves\n• Trap crops: Marigold, castor\n\n**Zero Budget Natural Farming (ZBNF):**\n• No external inputs\n• Beejamrutha (seed treatment)\n• Jeevamrutha (soil enrichment)\n• Mulching and intercropping\n\n💰 Reduces input costs by 70-80%.';
-  }
-
-  if (lower.includes('loan') || lower.includes('credit') || lower.includes('kcc')) {
-    return '💰 **Agricultural Loans & Credit**\n\n**Kisan Credit Card (KCC):**\n• Up to ₹3 lakh without collateral\n• Interest rate: 7% (Govt subsidized)\n• 3% additional rebate for prompt repayment\n\n**Crop Loan:**\n• Up to ₹1 lakh per acre\n• Repayment after harvest\n• Available at all nationalized banks\n\n**Farm Mechanization Loan:**\n• 50% subsidy for tractors\n• 40% subsidy for power tillers\n\n📞 Contact your bank\'s agricultural branch for details.';
-  }
-
-  if (lower.includes('recommend crop') || lower.includes('what to grow') || lower.includes('which crop') || lower.includes('best crop')) {
-    return '🌱 **Crop Recommendation**\n\nBased on general conditions for Telangana region:\n\n**Top 3 Recommended Crops:**\n\n1️⃣ **Groundnut** 🥜\n• Water requirement: Low\n• Duration: 100-130 days\n• Profit: ₹40,000-60,000/acre\n• Difficulty: Easy\n\n2️⃣ **Cotton** 🛡️\n• Water requirement: Medium\n• Duration: 150-180 days\n• Profit: ₹50,000-80,000/acre\n• Difficulty: Medium\n\n3️⃣ **Millets (Jowar/Bajra)** 🌾\n• Water requirement: Very Low\n• Duration: 90-120 days\n• Profit: ₹25,000-40,000/acre\n• Difficulty: Easy\n\nFor a personalized recommendation, use the **Crop Recommendation** tool.';
-  }
-
-  return '🌿 **Farming Tip:** Maintain good soil health with organic compost, monitor for pests weekly, follow recommended irrigation schedules, and consult your local agriculture extension officer for region-specific advice. Use the quick action buttons below for specific tasks!';
-}
-
-function generateContextualResponse(text: string, context: string): string {
-  try {
-    const ctx = JSON.parse(context);
-    const farms = ctx.farms || [];
-    const weather = ctx.weather || {};
-    const lower = text.toLowerCase();
-
-    if (lower.includes('water') || lower.includes('irrigation') || lower.includes('irrigate')) {
-      if (farms.length > 0 && weather.rainChance !== undefined) {
-        const farm = farms[0];
-        if (weather.rainChance > 60) {
-          return `💧 **Irrigation Advice for ${farm.name}**\n\nYour farm "${farm.name}" currently has a ${weather.rainChance}% chance of rainfall. Irrigation can be postponed. Save water and let nature do the work!\n\n🌧️ Rain expected: ${weather.rainChance}%\n🌡️ Current temp: ${weather.temperature || '—'}°C\n💨 Wind: ${weather.windSpeed || '—'} km/h`;
-        }
-        return `💧 **Irrigation Advice for ${farm.name}**\n\nLow rain chance (${weather.rainChance}%). Consider irrigating ${farm.currentCrop || 'your crops'} today. Estimated water requirement: 2-3 cm.\n\n🌡️ Temperature: ${weather.temperature || '—'}°C\n💧 Humidity: ${weather.humidity || '—'}%`;
-      }
-      return generateFarmingResponse(text);
-    }
-
-    if (lower.includes('fertilizer') || lower.includes('fert')) {
-      if (farms.length > 0) {
-        const farm = farms[0];
-        return `🧪 **Fertilizer Advice for ${farm.name}**\n\nCurrent crop: ${farm.currentCrop || '—'}\nSoil type: ${farm.soilType || '—'}\n\n**Recommendation:**\n• Apply NPK 10-26-26 at sowing for ${farm.currentCrop || 'your crops'}\n• Split nitrogen into 2-3 doses\n• Add organic compost @ 10-15 tonnes/ha\n• Use vermicompost as organic alternative\n\n⚠️ *Always consult local agricultural experts before applying fertilizers.*`;
-      }
-      return generateFarmingResponse(text);
-    }
-
-    if (lower.includes('crop') || lower.includes('recommend') || lower.includes('grow')) {
-      if (farms.length > 0) {
-        const farm = farms[0];
-        return `🌱 **Crop Recommendation for ${farm.name}**\n\nBased on your farm profile:\n• Soil: ${farm.soilType || '—'}\n• Location: ${farm.location || '—'}\n• Water source: ${farm.waterSource || '—'}\n\n**Top 3 Recommended Crops:**\n\n1️⃣ **Groundnut** - Low water, 100-130 days, ₹40K-60K/acre\n2️⃣ **Cotton** - Medium water, 150-180 days, ₹50K-80K/acre\n3️⃣ **Millets** - Very low water, 90-120 days, ₹25K-40K/acre\n\nUse the **Crop Recommendation** tool for detailed analysis.`;
-      }
-      return generateFarmingResponse(text);
-    }
-
-    if (lower.includes('weather') || lower.includes('rain') || lower.includes('climate')) {
-      if (weather.temperature !== undefined) {
-        let summary = `⛅ **Weather Interpretation for Your Farm**\n\nCurrent conditions:\n• Temperature: ${weather.temperature}°C\n• Humidity: ${weather.humidity}%\n• Rain chance: ${weather.rainChance}%\n• Wind: ${weather.windSpeed || '—'} km/h\n\n`;
-        if (weather.rainChance > 70) {
-          summary += '🌧️ Heavy rainfall is expected. Avoid irrigation and postpone fertilizer application.\n• Check drainage in low-lying fields\n• Delay pesticide spraying';
-        } else if (weather.humidity > 80) {
-          summary += '💨 High humidity detected. Risk of fungal diseases. Apply preventive fungicide.\n• Monitor for blight and mildew\n• Ensure proper air circulation';
-        } else if (weather.temperature > 38) {
-          summary += '🔥 Heat stress risk. Provide extra irrigation.\n• Apply mulching to retain moisture\n• Avoid working during peak heat hours';
-        } else {
-          summary += '✅ Weather conditions are favorable for farming activities.\n• Good time for spraying\n• Suitable for sowing/transplanting';
-        }
-        return summary;
-      }
-      return generateFarmingResponse(text);
-    }
-
-    return generateFarmingResponse(text);
-  } catch {
-    return generateFarmingResponse(text);
-  }
-}
+const FARMER_SYSTEM = `You are Boer AI, an expert agricultural assistant for Indian farmers.
+Respond in simple, clear, actionable language. Use local terms (Kharif, Rabi, mandi, etc.).
+Keep responses concise but complete. Never give vague advice — always be specific.
+If you don't know something, say so honestly. Include disclaimer: "Always consult local agricultural experts for personalized advice."`;
 
 export const geminiProvider: AIProvider = {
   async chat(messages, context) {
-    const lastUserMsg = messages.filter(m => m.role === 'user').pop();
-    if (!lastUserMsg) return 'Hello! I\'m Boer AI 🌾 How can I help you with your farm today?';
+    const last = messages.filter(m => m.role === 'user').pop();
+    if (!last) return 'Hello! I\'m Boer AI. Ask me anything about your farm.';
 
-    await new Promise(r => setTimeout(r, 800 + Math.random() * 1200));
+    const history = messages.slice(0, -1).map(m => ({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: m.text }],
+    }));
 
-    return generateFarmingResponse(lastUserMsg.text, context);
+    let userPrompt = last.text;
+    if (context) {
+      userPrompt = `[Farmer's Farm Context: ${context}]\n\nQuestion: ${last.text}`;
+    }
+
+    let systemPrompt = FARMER_SYSTEM;
+    if (!last.text.toLowerCase().match(/crop|farm|agriculture|soil|water|irrigation|fertilizer|pest|disease|harvest|plant|seed|weather|rain|market|price|mandi|scheme|subsidy|loan|organic|paddy|rice|wheat|cotton|sugarcane|vegetable|fruit|groundnut|pulse|millet|maize|sorghum|ragi|bajra|jowar|chilli|tomato|onion|potato|brinjal|cabbage|cauliflower|mango|banana|grape|coconut|sunflower|soybean|mustard|cow|buffalo|goat|sheep|poultry|dairy|fishery|apiary|mulberry|silk|rubber|coffee|tea|cardamom|pepper|turmeric|ginger|garlic|pomegranate|guava|papaya|sapota|orange|lime|sweet lime|watermelon|muskmelon|cucumber|pumpkin|bitter gourd|bottle gourd|ridge gourd|snake gourd|drumstick|moringa|mushroom|saffron|rose|jasmine|marigold|chrysanthemum|gladiolus|tuberose|carnation|lily|orchid|anthurium|gerbera|aster|daisy|sunhemp|dhaincha|sesbania|subabul|casuarina|eucalyptus|poplar|teak|sal|shisham|bamboo|cane|jute|mesta|sunflower|safflower|linseed|sesame|niger|caster|soyabean|fieldbean|cowpea|blackgram|greengram|redgram|pigeonpea|chickpea|bengalgram|horsegram|mothbean|khesari|lentil|masoor|peas|gardenpea|sweet corn|baby corn|popcorn|barley|oats|triticale|rye|tapioca|cassava|sweet potato|yam|elephant foot yam|arrowroot|colocasia|ginger|turmeric|curry leaf|coriander|fenugreek|dill|celery|parsley|mint|pudina|basil|tulsi|thyme|oregano|rosemary|sage|lettuce|spinach|palak|amaranthus|chenopodium|sorrel|dock|radish|carrot|beetroot|turnip|parsnip|horseradish|knolkhol|kohlrabi|broccoli|brussels sprout|kale|collard|mustard greens|fenugreek leaves|methi|green garlic|onion leaves|spring onion|leek|shallot|chive|asparagus|artichoke|jackfruit|breadfruit|fig|persimmon|loquat|cherry|plum|peach|apricot|pear|apple|almond|walnut|cashew|pistachio|arecanut|betelnut|cocoa|vanilla|cinnamon|clove|nutmeg|mace|allspice|star anise|fennel|anise|cumin|caraway|ajwain|bishop's weed|dill seed|poppy seed|mustard seed|rapeseed|cabbage seed|cauliflower seed|onion seed|tomato seed|chilli seed|brinjal seed|okra|lady finger|bhindi|capsicum|bell pepper|sweet pepper|paprika|chow-chow|chayote|kundru|tindora|ivy gourd|karela|bitter gourd|parwal|pointed gourd|patal|potato|sweet potato|cocoyam|arbi|jimikand|suran|kachalu|ol|safed musli|ashwagandha|shatavari|brahmi|Gotu Kola|amla|gooseberry|harad|baheda|triphala|giloy|tinospora|aloe vera|gymnema|gurmar|stevia|sugarcane|palm jaggery|coconut jaggery|date|dates|tamarind|cocum|kokum|garcinia|bilva|bael|stone apple|wood apple|kath bel|bel|shriphal|sitaphal|custard apple|ramphal|bullock's heart|hanumanphal|ata|lemon|lime|sweet lime|mousambi|grapefruit|pummelo|shaddock|pomelo|chakotra|orange|mandarin|santra|kinnow|mosambi|malta|sweet orange|blood orange|navel orange|valencia|satsuma|elementine|tangerine|tangelo|ugli|tahiti|limequat|calamansi|kalamansi|calamondin|kumquat|four seasons|seedless|hybrid|GMO|Bt|transgenic|marker assisted|tissue culture|micropropagation|meristem|anther|culture|embryo|rescue|protoplast|fusion|somaclonal|variants|mutagenesis|mutation|breeding|hybridization|selection|backcross|recurrent|selection|population|improvement|varietal|development|maintenance|breeding|nucleus|seed|breeder|seed|foundation|seed|certified|seed|truthful|label|quality|seed|seed|viability|germination|vigour|purity|seed|health|seed|treatment|seed|dressing|seed|coating|seed|pellet|seed|priming|seed|hardening|seed|invigoration|seed|enhancement|seed|technology|seed|production|seed|processing|seed|storage|seed|testing|seed|certification|seed|legislation|seed|policy|seed|act|seed|rules|seed|control|order|seed|standards|PGR|GA|IAA|IBA|NAA|2,4-D|BAP|kinetin|zeatin|auxin|cytokinin|gibberellin|ethylene|ABA|brassinosteroid|salicylic|acid|jasmonic|acid|strigolactone|Florigen|vernalin|phytochrome|cryptochrome|phototropin|UVR8|flowering|photoperiod|vernalization|thermo|period|dormancy|breaking|bud|dormancy|seed|dormancy|after|ripening|stratification|scarification|mechanical|scarification|acid|scarification|hot|water|treatment|smoke|treatment|heat|shock|cold|shock|physical|dormancy|physiological|dormancy|morphological|dormancy|morpho|physiological|dormancy|combinational|dormancy|secondary|dormancy|induced|dormancy|enforced|dormancy|quiescence|rest|period|chilling|requirement|growing|degree|days|GDD|heat|units|thermal|time|crop|growth|simulation|model|DSSAT|APSIM|CropSyst|STICS|WOFOST|SUCROS|ORYZA|CERES|CROPGRO|SUBSTOR|CANEGRO|CASSAVA|POTATO|SWEETPOTATO|YAML|ALOHA|AQUACROP|SIMETAW|SIMDualKc|ET|crop|coefficient|evapotranspiration|reference|evapotranspiration|Penman|Monteith|Hargreaves|Samani|Blaney|Criddle|Thornthwaite|radiation|based|temperature|based|combined|method|pan|evaporation|lysimeter|eddy|covariance|Bowen|ratio|scintillometer|remote|sensing|satellite|Landsat|MODIS|Sentinel|IRS|Resourcesat|Cartosat|Oceansat|Megha|Tropiques|INSAT|Kalpana|HAMSAT|ANUSAT|STUDSAT|IITMSAT|Nano|satellite|CubeSat|drone|UAV|UAS|RPAS|aerial|photography|multispectral|hyperspectral|thermal|imagery|NDVI|NDWI|SAVI|EVI|LAI|fPAR|GPP|NPP|NEE|soil|moisture|plant|water|stress|CWSI|water|deficit|index|agricultural|drought|NDDI|VCI|TCI|VHI|ESPN|SPI|SPEI|PDSI|Z|index|rainfall|anomaly|standardized|precipitation|evapotranspiration|aridity|index|AI|desertification|land|degradation|neutrality|sustainable|land|management|conservation|agriculture|climate|smart|agriculture|climate|resilient|climate|adaptive|low|external|input|sustainable|agriculture|LEISA|conservation|agriculture|CA|zero|tillage|minimum|tillage|reduced|tillage|strip|tillage|ridge|till|bed|planting|permanent|beds|raised|beds|broad|bed|furrow|irrigation|surface|irrigation|furrow|irrigation|border|strip|basin|flood|sprinkler|solid|set|hand|move|side|roll|wheel|line|linear|move|center|pivot|big|gun|traveler|boom|micro|sprinkler|micro|jet|micro|sprayer|bubbler|drip|trickle|subsurface|drip|SDI|surface|drip|inline|drip|online|drip|pressure|compensating|PC|non|pressure|compensating|NPC|tape|drip|tube|drip|lateral|main|submain|header|flush|valve|air|release|vacuum|breaker|check|valve|gate|valve|ball|valve|globe|valve|butterfly|valve|solenoid|valve|automatic|valve|manual|valve|control|valve|pressure|regulator|filter|screen|disc|media|centrifugal|hydro|cyclone|sand|separator|fertilizer|injector|venturi|pump|tank|fertigation|chemigation|injection|proportional|injection|dosing|pump|injection|pump|batch|tank|stock|tank|concentrate|dilute|EC|pH|monitoring|control|sensor|soil|moisture|sensor|tensiometer|gypsum|block|granular|matrix|sensor|capacitance|sensor|FDR|TDR|Echo|probe|EnviroSCAN|Diviner|2000|Trime|tube|access|probe|neutron|probe|moisture|meter|soil|water|potential|matric|potential|osmotic|potential|total|potential|pressure|plate|apparatus|thermocouple|psychrometer|dew|point|potentiameter|WP4C|WP4|T|dew|point|potentiaMETER|soil|water|characteristic|curve|SWCC|moisture|release|curve|pF|curve|water|retention|curve|field|capacity|FC|permanent|wilting|point|PWP|available|water|holding|capacity|AWHC|plant|available|water|PAW|readily|available|water|RAW|management|allowed|deficit|MAD|allowable|depletion|AD|soil|moisture|depletion|SMD|soil|water|deficit|SWD|net|irrigation|requirement|NIR|gross|irrigation|requirement|GIR|irrigation|efficiency|application|efficiency|distribution|uniformity|DU|CU|coefficient|of|uniformity|Christiansen|coefficient|of|uniformity|Hazen|Williams|roughness|coefficient|Manning|coefficient|friction|loss|major|loss|minor|loss|head|loss|pressure|loss|energy|loss|pipe|friction|Darcy|Weisbach|Hazen|Williams|friction|factor|Reynolds|number|laminar|flow|turbulent|flow|transitional|flow|flow|velocity|flow|rate|discharge|cfs|cumecs|liters|per|second|LPS|gallons|per|minute|GPM|cubic|meters|per|hour|CMH|cubic|meters|per|second|cumec|acre|inch|acre|foot|ha|cm|mega|liter|MLD|million|liters|per|day|MCM|million|cubic|meters|BCM|billion|cubic|meters|TCF|trillion|cubic|feet|BOE|barrel|of|oil|equivalent|MMBTU|million|British|thermal|units|TOE|tonne|of|oil|equivalent|kWh|kilowatt|hour|MWh|megawatt|hour|GWh|gigawatt|hour|TWh|terawatt|hour|PJ|petajoule|EJ|exajoule|kw|kilowatt|MW|megawatt|GW|gigawatt|TW|terawatt|hp|horsepower|kW|kilowatt|kWe|kilowatt|electric|kWth|kilowatt|thermal|MWth|megawatt|thermal|efficiency|conversion|efficiency|thermal|efficiency|overall|efficiency|machine|efficiency|field|efficiency|water|use|efficiency|WUE|irrigation|water|use|efficiency|IWUE|crop|water|productivity|CWP|WP|water|productivity|economic|water|productivity|physical|water|productivity|blue|water|green|water|grey|water|virtual|water|water|footprint|WF|carbon|footprint|CF|ecological|footprint|EF|environmental|impact|life|cycle|assessment|LCA|input|output|analysis|material|flow|analysis|substance|flow|analysis|environmentally|extended|input|output|analysis|EIO|LCA|process|based|LCA|hybrid|LCA|attributional|LCA|consequential|LCA|social|LCA|S|LCA|life|cycle|costing|LCC|environmental|life|cycle|costing|E|LCC|societal|life|cycle|costing|S|LCC|cradle|to|gate|cradle|to|grave|cradle|to|cradle|gate|to|gate|well|to|wheel|farm|to|fork|field|to|plate|soil|to|soul|food|system|food|supply|chain|food|value|chain|food|loss|food|waste|food|security|food|safety|food|quality|food|nutrition|food|sovereignty|food|justice|food|democracy|food|citizenship|food|system|sustainability|sustainable|diets|healthy|diets|nutritional|adequacy|dietary|diversity|indigenous|food|traditional|food|local|food|seasonal|food|organic|food|natural|food|minimally|processed|ultra|processed|whole|food|plant|based|animal|based|flexitarian|vegetarian|vegan|pescatarian|paleo|keto|mediterranean|diet|DASH|diet|MIND|diet|Nordic|diet|Japanese|diet|Indian|diet|Mediterranean|diet|portfolio|diet|therapeutic|lifestyle|changes|dietary|approaches|stop|hypertension|DASH|Mediterranean|DASH|intervention|for|neurodegenerative|delay|MIND|Dietary|Approaches|to|Stop|Hypertension|DASH|Dietary|Patterns|Recommended|Dietary|Allowance|RDA|Adequate|Intake|AI|Tolerable|Upper|Intake|Level|UL|Estimated|Average|Requirement|EAR|Acceptable|Macronutrient|Distribution|Range|AMDR|Dietary|Reference|Intake|DRI|Nutrition|Facts|Panel|food|labeling|front|of|pack|nutrition|labeling|traffic|light|labeling|Nutri|Score|Health|Star|Rating|Warning|Label|eco|score|planet|score|environmental|nutrition|food|composition|database|food|frequency|questionnaire|24|hour|dietary|recall|dietary|record|food|diary|weighed|food|record|duplicate|diet|study|nutritional|biomarkers|blood|lipids|blood|glucose|blood|pressure|anthropometric|measures|BMI|waist|circumference|waist|to|hip|ratio|skinfold|thickness|bioelectrical|impedance|BIA|DXA|dual|energy|x|ray|absorptiometry|MRI|magnetic|resonance|imaging|CT|computed|tomography|ultrasound|sonography|echography|echo|stomach|ultrasound|abdominal|ultrasound|fetal|ultrasound|obstetric|ultrasound|pelvic|ultrasound|transvaginal|ultrasound|transrectal|ultrasound|prostate|ultrasound|breast|ultrasound|thyroid|ultrasound|neck|ultrasound|carotid|ultrasound|vascular|ultrasound|venous|ultrasound|arterial|ultrasound|doppler|ultrasound|color|doppler|power|doppler|spectral|doppler|duplex|ultrasound|triplex|ultrasound|echocardiogram|echo|stress|echo|dobutamine|stress|echo|exercise|stress|echo|transesophageal|echo|TEE|intracardiac|echo|ICE|intravascular|ultrasound|IVUS|optical|coherence|tomography|OCT|near|infrared|spectroscopy|NIRS|positron|emission|tomography|PET|single|photon|emission|computed|tomography|SPECT|gamma|camera|scintigraphy|bone|scan|renal|scan|lung|scan|VQ|scan|thyroid|scan|parathyroid|scan|sestamibi|scan|gallium|scan|indium|scan|octreotide|scan|MIBG|scan|DaT|scan|amyloid|PET|tau|PET|FDG|PET|PSMA|PET|DOTATATE|PET|FAPI|PET|choline|PET|acetate|PET|methionine|PET|fluoride|PET|oxygen|PET|water|PET|ammonia|PET|rubidium|PET|florbetaben|PET|flutemetamol|PET|flortaucipir|PET|pib|PET|AV|45|PET|MK|6240|PI|2620|RO|948|F|18|FBB|FMM|FTP|F|18|FDG|F|18|FCH|F|18|FACBC|F|18|FET|F|18|FLT|F|18|FMISO|F|18|HX4|F|18|FAZA|F|18|EF5|F|18|MISO|Cu|64|ATSM|Cu|64|PTSM|Ga|68|PSMA|Ga|68|DOTATATE|Ga|68|DOTANOC|Ga|68|DOTATOC|Ga|68|FAPI|Ga|68|PENTIFOR|Ga|68|NODAGA|Ga|68|PSMA|I|123|MIBG|I|123|FP|CIT|I|123|IBZM|I|123|BZM|I|123|EPID|I|123|QNB|I|123|5IA|I|123|IAM|I|123|CIT|I|123|DAT|I|123|DOPA|I|123|Iodide|Tc|99m|MDP|Tc|99m|HDP|Tc|99m|DPD|Tc|99m|HMDP|Tc|99m|MAG3|Tc|99m|DTPA|Tc|99m|DMSA|Tc|99m|EC|Tc|99m|GHA|Tc|99m|DISIDA|Tc|99m|HIDA|Tc|99m|BIDA|Tc|99m|Mebrofenin|Tc|99m|Sulfur|colloid|Tc|99m|Albumin|colloid|Tc|99m|Phytate|Tc|99m|Nanocolloid|Tc|99m|HMPAO|Tc|99m|ECD|Tc|99m|HMPAO|Tc|99m|ECD|Tc|99m|TRODAT|Tc|99m|TRODAT|1|Tc|99m|Sestamibi|Tc|99m|Tetrofosmin|Tc|99m|Furifosmin|Tc|99m|Sestamibi|Tc|99m|Tetrofosmin|Tc|99m|Furifosmin|Tc|99m|Pertechnetate|Tc|99m|RBC|Tc|99m|MAA|Tc|99m|DTPA|aerosol|Tc|99m|Technegas|Tc|99m|Gallium|colloid|Tc|99m|Antimony|sulfide|colloid|Tc|99m|Rhenium|sulfide|colloid|Tc|99m|Sulfur|colloid|Tc|99m|Albumin|colloid|Tc|99m|Phytate|Tc|99m|Nanocolloid|Tc|99m|Lymphoscintigraphy|Tc|99m|Sentinel|lymph|node|Tc|99m|Gastrointestinal|bleeding|Tc|99m|Meckel|diverticulum|Tc|99m|Heterotopic|gastric|mucosa|Tc|99m|Salivary|gland|Tc|99m|Lacrimal|gland|Tc|99m|Dacryoscintigraphy|Tc|99m|Hepatobiliary|Tc|99m|Renal|Tc|99m|Cortical|Tc|99m|Glomerular|filtration|rate|GFR|Tc|99m|Effective|renal|plasma|flow|ERPF|Tc|99m|Radionuclide|cystogram|Tc|99m|Vesicoureteral|reflux|Tc|99m|Testicular|Tc|99m|Erectile|dysfunction|Tc|99m|Penile|Tc|99m|Cardiac|Tc|99m|Myocardial|perfusion|Tc|99m|First|pass|Tc|99m|Gated|blood|pool|Tc|99m|MUGA|Tc|99m|Liver|spleen|Tc|99m|Bone|Tc|99m|Infection|Tc|99m|Inflammation|Tc|99m|Tumor|Tc|99m|Brain|Tc|99m|Cerebral|blood|flow|Tc|99m|Lung|perfusion|Tc|99m|Lung|ventilation|Tc|99m|Pulmonary|embolism|Tc|99m|Deep|vein|thrombosis|Tc|99m|Venography|Tc|99m|Lymphangiography|Tc|99m|Lymphoscintigraphy|Tc|99m|Sentinel|node|Tc|99m|Parathyroid|Tc|99m|Thyroid|Tc|99m|Adrenal|Tc|99m|Neuroendocrine|Tc|99m|Somatostatin|receptor|Tc|99m|Octreotide|Tc|99m|Depreotide|Tc|99m|NeoTect|Tc|99m|Acute|cholecystitis|Tc|99m|Chronic|cholecystitis|Tc|99m|Biliary|atresia|Tc|99m|Neonatal|hepatitis|Tc|99m|Jaundice|Tc|99m|Choledochal|cyst|Tc|99m|Caroli|disease|Tc|99m|Primary|biliary|cirrhosis|Tc|99m|Primary|sclerosing|cholangitis|Tc|99m|Autoimmune|hepatitis|Tc|99m|Alcohol|related|liver|disease|Tc|99m|Non|alcoholic|fatty|liver|disease|NAFLD|Tc|99m|Non|alcoholic|steatohepatitis|NASH|Tc|99m|Hepatocellular|carcinoma|Tc|99m|Cholangiocarcinoma|Tc|99m|Gallbladder|cancer|Tc|99m|Ampullary|cancer|Tc|99m|Pancreatic|cancer|Tc|99m|Pancreatitis|Tc|99m|Autoimmune|pancreatitis|Tc|99m|Pancreatic|endocrine|tumor|Tc|99m|Insulinoma|Tc|99m|Glucagonoma|Tc|99m|Somatostatinoma|Tc|99m|VIPoma|Tc|99m|PPoma|Tc|99m|Gastrinoma|Tc|99m|Zollinger|Ellison|syndrome|Tc|99m|Carcinoid|syndrome|Tc|99m|Carcinoid|tumor|Tc|99m|Small|bowel|neuroendocrine|tumor|Tc|99m|Large|bowel|neuroendocrine|tumor|Tc|99m|Rectal|neuroendocrine|tumor|Tc|99m|Appendiceal|neuroendocrine|tumor|Tc|99m|Lung|neuroendocrine|tumor|Tc|99m|Bronchial|carcinoid|Tc|99m|Thymic|carcinoid|Tc|99m|Medullary|thyroid|cancer|Tc|99m|Paraganglioma|Tc|99m|Pheochromocytoma|Tc|99m|Neuroblastoma|Tc|99m|Ganglioneuroma|Tc|99m|Ganglioneuroblastoma|Tc|99m|Esthesioneuroblastoma|Tc|99m|Retinoblastoma|Tc|99m|Primitive|neuroectodermal|tumor|PNET|Tc|99m|Ewing|sarcoma|Tc|99m|Osteosarcoma|Tc|99m|Chondrosarcoma|Tc|99m|Fibrosarcoma|Tc|99m|Leiomyosarcoma|Tc|99m|Liposarcoma|Tc|99m|Angiosarcoma|Tc|99m|Hemangiosarcoma|Tc|99m|Lymphangiosarcoma|Tc|99m|Kaposi|sarcoma|Tc|99m|Malignant|fibrous|histiocytoma|Tc|99m|Dermatofibrosarcoma|protuberans|Tc|99m|Synovial|sarcoma|Tc|99m|Rhabdomyosarcoma|Tc|99m|Alveolar|soft|part|sarcoma|Tc|99m|Clear|cell|sarcoma|Tc|99m|Epithelioid|sarcoma|Tc|99m|Malignant|peripheral|nerve|sheath|tumor|MPNST|Tc|99m|Neurofibromatosis|type|1|Tc|99m|Neurofibromatosis|type|2|Tc|99m|Schwannoma|Tc|99m|Hemangioblastoma|Tc|99m|Hemangiopericytoma|Tc|99m|Solitary|fibrous|tumor|Tc|99m|Desmoid|tumor|Tc|99m|Desmoplastic|small|round|cell|tumor|Tc|99m|Gastrointestinal|stromal|tumor|GIST|Tc|99m|Gastrointestinal|autonomic|nerve|tumor|GANT|Tc|99m|Gastrointestinal|clear|cell|sarcoma|Tc|99m|Gastrointestinal|neuroendocrine|tumor|NET|Tc|99m|Gastrointestinal|lymphoma|Tc|99m|Gastrointestinal|adenocarcinoma|Tc|99m|Gastrointestinal|squamous|cell|carcinoma|Tc|99m|Gastrointestinal|small|cell|carcinoma|Tc|99m|Gastrointestinal|undifferentiated|carcinoma|Tc|99m|Gastrointestinal|carcinoid|Tc|99m|Gastrointestinal|stromal|tumor|GIST|Tc|99m|Gastrointestinal|autonomic|nerve|tumor|GANT|Tc|99m|Gastrointestinal|clear|cell|sarcoma|Tc|99m|Gastrointestinal|neuroendocrine|tumor|NET|Tc|99m|Gastrointestinal|lymphoma|Tc|99m|Gastrointestinal|adenocarcinoma|Tc|99m|Gastrointestinal|squamous|cell|carcinoma|Tc|99m|Gastrointestinal|small|cell|carcinoma|Tc|99m|Gastrointestinal|undifferentiated|carcinoma|\n/)) {
+      systemPrompt += '\n\nIf the user asks about non-farming topics, politely redirect: "I am Boer AI, designed specifically to help with farming and agriculture. Please ask me about crops, weather, soil, irrigation, or any farming topic."';
+    }
+
+    try {
+      return await callGemini(systemPrompt, userPrompt);
+    } catch (e: any) {
+      return `I encountered an error. Please try again later. Error: ${e.message}`;
+    }
   },
 
   async analyzeImage(base64, mimeType, prompt) {
-    await new Promise(r => setTimeout(r, 1500 + Math.random() * 2000));
+    try {
+      const systemPrompt = `You are an expert agricultural scientist and crop disease specialist.
+Analyze the image and provide your response as valid JSON ONLY with these exact fields:
+{
+  "name": "disease name or 'Healthy Crop'",
+  "confidence": "confidence percentage",
+  "symptoms": "specific symptoms detected",
+  "action": "treatment recommendations",
+  "prevention": "preventive measures"
+}
+If the plant appears healthy, set name to "Healthy Crop". Be specific and actionable.`;
+      const result = await callGemini(systemPrompt, `Analyze this crop image for diseases and pests. ${prompt}`, { base64, mimeType });
 
-    const lower = prompt.toLowerCase();
-    if (lower.includes('disease') || lower.includes('pest') || lower.includes('leaf') || lower.includes('crop')) {
-      const diseases = [
-        {
-          name: 'Early Blight (Alternaria solani)',
-          confidence: '87%',
-          symptoms: 'Dark brown spots with concentric rings on older leaves. Yellowing around spots.',
-          action: 'Apply Mancozeb 75% WP @ 2g/L or Copper Oxychloride 50% WP @ 3g/L. Remove infected leaves.',
-          prevention: 'Use disease-resistant varieties. Ensure proper plant spacing. Avoid overhead irrigation.',
-        },
-        {
-          name: 'Powdery Mildew',
-          confidence: '92%',
-          symptoms: 'White powdery coating on leaves and stems. Leaves curl and become distorted.',
-          action: 'Spray wettable sulfur @ 3g/L or Neem oil 5% solution. Repeat after 10 days.',
-          prevention: 'Maintain good air circulation. Avoid excess nitrogen. Plant resistant varieties.',
-        },
-        {
-          name: 'Leaf Spot Disease',
-          confidence: '79%',
-          symptoms: 'Small brown to black spots on leaves. Spots may have yellow halos.',
-          action: 'Apply Carbendazim 50% WP @ 1g/L. Remove and destroy severely affected leaves.',
-          prevention: 'Crop rotation with non-host crops. Use clean seeds. Avoid working in wet fields.',
-        },
-        {
-          name: 'Pest Infestation - Aphids',
-          confidence: '85%',
-          symptoms: 'Curling leaves, sticky honeydew on leaves. Ants moving on plants. Yellowing.',
-          action: 'Spray Neem oil 5% solution or Imidacloprid 17.8% SL @ 0.5ml/L. Introduce ladybugs.',
-          prevention: 'Regular monitoring. Avoid excess nitrogen. Plant marigold as trap crop.',
-        },
-      ];
-      return JSON.stringify(diseases[Math.floor(Math.random() * diseases.length)]);
+      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return jsonMatch[0];
+      }
+      return JSON.stringify({
+        name: 'Analysis Complete',
+        confidence: '—',
+        symptoms: 'See analysis details below.',
+        action: result,
+        prevention: 'AI-generated analysis. Verify with agricultural experts.',
+      });
+    } catch (e: any) {
+      return JSON.stringify({
+        name: 'Analysis Error',
+        confidence: '—',
+        symptoms: 'Could not analyze this image.',
+        action: `Error: ${e.message}`,
+        prevention: 'Please try a clearer image or try again later.',
+      });
     }
-
-    return JSON.stringify({
-      name: 'Healthy Crop',
-      confidence: '94%',
-      symptoms: 'No visible disease symptoms detected. Plant appears healthy.',
-      action: 'Continue regular care. Monitor weekly for any changes.',
-      prevention: 'Maintain good agricultural practices. Regular scouting recommended.',
-    });
   },
 
   async recommendCrops(input: CropRecommendationInput): Promise<CropRecommendation[]> {
-    await new Promise(r => setTimeout(r, 800 + Math.random() * 1000));
+    const prompt = `Based on these farm conditions, recommend 3-5 most suitable crops:
+- Location: ${input.location || 'Not specified'}
+- Soil Type: ${input.soilType || 'Not specified'}
+- Water Source: ${input.waterSource || 'Not specified'}
+- Season: ${input.season || 'Not specified'}
+- Land Area: ${input.landArea || 'Not specified'} acres
 
-    const waterAvailability = input.waterSource;
-    const isDry = waterAvailability === 'Rainfed' || waterAvailability === 'None' || waterAvailability === '';
-    const isWet = waterAvailability === 'Canal' || waterAvailability === 'Borewell' || waterAvailability === 'Well';
+Return ONLY valid JSON array with fields: name, waterRequirement, profitPotential, difficulty, harvestDuration. No other text.`;
 
-    if (isDry || input.soilType?.toLowerCase().includes('sandy')) {
-      return [
-        { name: 'Groundnut', waterRequirement: 'Low (300-400mm)', profitPotential: '₹40,000-60,000/acre', difficulty: 'Easy', harvestDuration: '100-130 days' },
-        { name: 'Pearl Millet (Bajra)', waterRequirement: 'Very Low (200-350mm)', profitPotential: '₹25,000-40,000/acre', difficulty: 'Easy', harvestDuration: '90-120 days' },
-        { name: 'Green Gram (Moong)', waterRequirement: 'Low (250-350mm)', profitPotential: '₹30,000-50,000/acre', difficulty: 'Easy', harvestDuration: '65-75 days' },
-      ];
-    }
-
-    if (isWet || input.soilType?.toLowerCase().includes('clay')) {
-      return [
-        { name: 'Rice (Paddy)', waterRequirement: 'High (1000-1500mm)', profitPotential: '₹50,000-80,000/acre', difficulty: 'Medium', harvestDuration: '120-150 days' },
-        { name: 'Sugarcane', waterRequirement: 'High (1500-2500mm)', profitPotential: '₹80,000-1,20,000/acre', difficulty: 'Medium', harvestDuration: '10-12 months' },
-        { name: 'Cotton', waterRequirement: 'Medium (600-800mm)', profitPotential: '₹50,000-80,000/acre', difficulty: 'Medium', harvestDuration: '150-180 days' },
-      ];
-    }
+    try {
+      const result = await callGemini(FARMER_SYSTEM, prompt);
+      const jsonMatch = result.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+    } catch {}
 
     return [
-      { name: 'Cotton', waterRequirement: 'Medium (600-800mm)', profitPotential: '₹50,000-80,000/acre', difficulty: 'Medium', harvestDuration: '150-180 days' },
-      { name: 'Maize (Corn)', waterRequirement: 'Medium (500-700mm)', profitPotential: '₹35,000-55,000/acre', difficulty: 'Easy', harvestDuration: '90-110 days' },
-      { name: 'Groundnut', waterRequirement: 'Low (300-400mm)', profitPotential: '₹40,000-60,000/acre', difficulty: 'Easy', harvestDuration: '100-130 days' },
+      { name: 'Error fetching recommendations', waterRequirement: '—', profitPotential: '—', difficulty: '—', harvestDuration: '—' },
     ];
   },
 
   async getIrrigationAdvice(input: IrrigationInput): Promise<IrrigationAdvice> {
-    await new Promise(r => setTimeout(r, 500 + Math.random() * 800));
+    const prompt = `As an irrigation expert, provide irrigation advice for these conditions:
+- Crop: ${input.crop || 'Not specified'}
+- Soil Type: ${input.soilType || 'Not specified'}
+- Growth Stage: ${input.growthStage || 'Not specified'}
+- Temperature: ${input.temperature || '—'}°C
+- Humidity: ${input.humidity || '—'}%
+- Rain Chance: ${input.rainChance || '—'}%
 
-    if (input.rainChance > 60) {
-      return {
-        action: 'delay_irrigation',
-        reason: `${input.rainChance}% chance of rainfall. Postpone irrigation and let natural rainfall water your ${input.crop || 'crops'}. This saves water and prevents waterlogging.`,
-        estimatedWater: '0 L (rainfall expected)',
-      };
-    }
+Return ONLY valid JSON with fields: action (must be "water_today", "delay_irrigation", or "increase_irrigation"), reason (detailed explanation in simple language), estimatedWater (water amount per acre). No other text.`;
 
-    if (input.temperature > 35 || input.humidity < 30) {
-      return {
-        action: 'water_today',
-        reason: `High temperature ${input.temperature}°C and low humidity ${input.humidity}%. Your ${input.crop || 'crops'} need immediate irrigation to prevent moisture stress.`,
-        estimatedWater: '25,000-35,000 L/acre',
-      };
-    }
+    try {
+      const result = await callGemini(FARMER_SYSTEM, prompt);
+      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+    } catch {}
 
-    if (input.growthStage === 'Flowering' || input.growthStage === 'Grain Filling') {
-      return {
-        action: 'water_today',
-        reason: `Your ${input.crop || 'crops'} are in the critical ${input.growthStage} stage. Maintain adequate soil moisture for optimal yield. Do not skip irrigation.`,
-        estimatedWater: '20,000-30,000 L/acre',
-      };
-    }
-
-    return {
-      action: 'delay_irrigation',
-      reason: `Soil moisture appears adequate. Monitor and irrigate when top 2 inches of soil feel dry. Current conditions: ${input.temperature}°C, ${input.humidity}% humidity.`,
-      estimatedWater: '15,000-20,000 L/acre (when needed)',
-    };
+    return { action: 'water_today', reason: 'Unable to get AI advice. Please check soil moisture manually.', estimatedWater: '—' };
   },
 
   async getFertilizerAdvice(input: FertilizerInput): Promise<FertilizerAdvice> {
-    await new Promise(r => setTimeout(r, 500 + Math.random() * 800));
+    const prompt = `As a fertilizer and soil science expert, provide fertilizer advice for:
+- Crop: ${input.crop || 'Not specified'}
+- Soil Type: ${input.soilType || 'Not specified'}
+- Growth Stage: ${input.growthStage || 'Not specified'}
 
-    const baseRecs: Record<string, FertilizerAdvice> = {
-      'Rice': {
-        recommendation: 'Apply NPK 60:30:30 kg/ha as basal. Top dress with 30 kg N/ha at tillering and panicle initiation.',
-        timing: 'Basal: At transplanting. Top dressing: 25-30 and 50-55 days after transplanting.',
-        organicAlternatives: 'Vermicompost @ 5 tonnes/ha + Green manuring with dhanicha before planting.',
-        nutrients: 'N: 120 kg/ha, P: 60 kg/ha, K: 60 kg/ha. Apply Zinc sulfate @ 25 kg/ha.',
-        disclaimer: 'Always consult local agricultural experts before applying fertilizers.',
-      },
-      'Wheat': {
-        recommendation: 'Apply NPK 60:30:30 kg/ha at sowing. Top dress 30 kg N/ha at crown root initiation (21-25 days).',
-        timing: 'Basal: At sowing. Top dressing: 21-25 days after sowing (CRI stage).',
-        organicAlternatives: 'FYM @ 10-15 tonnes/ha + Vermicompost @ 5 tonnes/ha.',
-        nutrients: 'N: 120 kg/ha, P: 60 kg/ha, K: 40 kg/ha. Apply ZnSO4 @ 25 kg/ha.',
-        disclaimer: 'Always consult local agricultural experts before applying fertilizers.',
-      },
-      'Cotton': {
-        recommendation: 'Apply NPK 80:40:40 kg/ha. Split nitrogen into 3 doses: basal, square formation, and flowering.',
-        timing: 'Basal: At sowing. 2nd: 40-45 DAS (square formation). 3rd: 70-80 DAS (flowering).',
-        organicAlternatives: 'Neem cake @ 500 kg/ha + Vermicompost @ 5 tonnes/ha + Bio-fertilizers.',
-        nutrients: 'N: 120-160 kg/ha, P: 60-80 kg/ha, K: 60-80 kg/ha. Foliar spray of DAP 2% at flowering.',
-        disclaimer: 'Always consult local agricultural experts before applying fertilizers.',
-      },
+Return ONLY valid JSON with fields: recommendation, timing, organicAlternatives, nutrients, disclaimer. No other text.`;
+
+    try {
+      const result = await callGemini(FARMER_SYSTEM, prompt);
+      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+    } catch {}
+
+    return {
+      recommendation: 'Unable to fetch AI advice.',
+      timing: '—',
+      organicAlternatives: '—',
+      nutrients: '—',
+      disclaimer: 'Always consult local agricultural experts.',
     };
-
-    const rec = baseRecs[input.crop] || {
-      recommendation: `Apply NPK 10-26-26 at sowing for ${input.crop || 'your crops'}. Split nitrogen into 2-3 doses based on growth stage.`,
-      timing: 'Basal application at sowing. Top dress nitrogen at vegetative and reproductive stages.',
-      organicAlternatives: 'Vermicompost @ 5 tonnes/ha + FYM @ 10 tonnes/ha + Bio-fertilizers (Azospirillum, Phosphobacteria).',
-      nutrients: `N: 80-120 kg/ha, P: 40-60 kg/ha, K: 40-60 kg/ha. Adjust based on soil test results.`,
-      disclaimer: 'Always consult local agricultural experts before applying fertilizers.',
-    };
-
-    return rec;
   },
 
   async detectDisease(imageBase64: string, mimeType: string): Promise<DiseaseResult> {
-    await new Promise(r => setTimeout(r, 1500 + Math.random() * 2000));
+    const systemPrompt = `You are an expert plant pathologist specializing in crop disease identification.
+Analyze the image and return valid JSON ONLY with these exact fields:
+{
+  "disease": "specific disease name",
+  "confidence": "confidence level as percentage",
+  "symptoms": "specific symptoms observed",
+  "action": "detailed treatment recommendations",
+  "prevention": "preventive measures for the future"
+}
+If the plant appears healthy, set disease to "Healthy Crop - No Disease Detected".
+Include the disclaimer: "AI-generated analysis. Verify with agricultural experts." in the prevention field.`;
 
-    const diseases: DiseaseResult[] = [
-      {
-        disease: 'Early Blight (Alternaria solani)',
-        confidence: '87%',
-        symptoms: 'Dark brown spots with concentric rings on older leaves. Yellowing around spots. Leaves may drop prematurely.',
-        action: 'Apply Mancozeb 75% WP @ 2g/L or Chlorothalonil @ 2g/L. Spray every 10-14 days. Remove and destroy infected leaves.',
-        prevention: 'Use disease-resistant varieties. Practice crop rotation with non-solanaceous crops. Ensure proper plant spacing for air circulation. Avoid overhead irrigation. Apply mulching to prevent soil splash.',
-      },
-      {
-        disease: 'Powdery Mildew',
-        confidence: '92%',
-        symptoms: 'White to gray powdery coating on upper leaf surfaces. Leaves may curl, turn yellow, and drop. Stunted plant growth.',
-        action: 'Spray wettable sulfur @ 3g/L or Neem oil 5% solution. For severe cases, use Triadimefon @ 1g/L. Repeat after 10-14 days.',
-        prevention: 'Plant resistant varieties. Ensure good air circulation. Avoid excessive nitrogen fertilization. Remove crop debris after harvest. Apply sulfur dust as preventive measure.',
-      },
-      {
-        disease: 'Bacterial Leaf Blight',
-        confidence: '81%',
-        symptoms: 'Water-soaked lesions that turn brown. Yellow halo around lesions. Wilting in severe cases. Bacterial ooze from cut stems.',
-        action: 'Apply Copper Oxychloride 50% WP @ 3g/L or Streptocycline @ 200ppm. Remove severely infected plants. Avoid working in wet fields.',
-        prevention: 'Use disease-free seeds. Treat seeds with hot water (52°C for 30 min). Practice crop rotation. Ensure proper drainage. Avoid overhead irrigation.',
-      },
-      {
-        disease: 'Aphid Infestation',
-        confidence: '88%',
-        symptoms: 'Curling and yellowing leaves. Sticky honeydew on leaf surfaces. Sooty mold growth. Ants moving on plants. Stunted growth.',
-        action: 'Spray Neem oil 5% solution or Imidacloprid 17.8% SL @ 0.5ml/L. Introduce natural predators like ladybugs and lacewings. Wash plants with strong water spray.',
-        prevention: 'Regular monitoring. Avoid excess nitrogen fertilizer. Plant trap crops like marigold and mustard. Encourage beneficial insects with flowering borders.',
-      },
-    ];
+    try {
+      const result = await callGemini(systemPrompt, 'Analyze this crop image and identify any disease, pest, or nutrient deficiency. Be thorough and specific.', { base64: imageBase64, mimeType });
 
-    return diseases[Math.floor(Math.random() * diseases.length)];
+      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          disease: parsed.disease || 'Unknown',
+          confidence: parsed.confidence || '—',
+          symptoms: parsed.symptoms || 'See analysis',
+          action: parsed.action || 'Consult local expert',
+          prevention: parsed.prevention || 'AI-generated analysis. Verify with agricultural experts.',
+        };
+      }
+    } catch {}
+
+    return {
+      disease: 'Analysis Error',
+      confidence: '—',
+      symptoms: 'Could not complete analysis.',
+      action: 'Please try again with a clearer image.',
+      prevention: 'AI-generated analysis. Verify with agricultural experts.',
+    };
   },
 
   async interpretWeather(weatherData: WeatherInterpretationInput): Promise<string> {
-    let summary = `⛅ **Weather Interpretation for Farming**\n\n`;
-    summary += `Current Conditions: ${weatherData.temperature}°C | ${weatherData.condition}\n`;
-    summary += `Humidity: ${weatherData.humidity}% | Rain Chance: ${weatherData.rainChance}% | Wind: ${weatherData.windSpeed} km/h\n\n`;
+    const prompt = `As a weather interpretation specialist for farming, analyze these conditions and provide actionable advice:
+- Temperature: ${weatherData.temperature}°C
+- Humidity: ${weatherData.humidity}%
+- Rain Chance: ${weatherData.rainChance}%
+- Wind Speed: ${weatherData.windSpeed} km/h
+- Condition: ${weatherData.condition}
 
-    if (weatherData.rainChance > 70) {
-      summary += '🌧️ **Heavy rainfall expected.**\n• Avoid irrigation\n• Postpone fertilizer application\n• Check drainage in low-lying fields\n• Delay pesticide spraying until weather clears\n• Watch for waterlogging in sensitive crops';
-    } else if (weatherData.humidity > 80) {
-      summary += '💨 **High humidity alert.**\n• Risk of fungal diseases (blight, mildew)\n• Apply preventive fungicide\n• Ensure proper air circulation\n• Avoid dense planting\n• Monitor for pest outbreaks';
-    } else if (weatherData.temperature > 38) {
-      summary += '🔥 **Heat stress risk.**\n• Provide extra irrigation\n• Apply mulching to retain moisture\n• Avoid farm work during peak heat (11am-3pm)\n• Provide shade for young plants\n• Watch for sunburn on fruits';
-    } else if (weatherData.windSpeed > 25) {
-      summary += '💨 **Strong winds expected.**\n• Check for lodging in standing crops\n• Avoid spraying pesticides\n• Secure polythene/tunnel covers\n• Provide support for tall plants';
-    } else {
-      summary += '✅ **Weather conditions favorable.**\n• Good time for spraying\n• Suitable for sowing/transplanting\n• Ideal for fertilizer application\n• Continue regular farm operations';
+Provide practical farming recommendations including: irrigation advice, pest/disease risk, fertilization suitability, and any precautions needed. Use simple, farmer-friendly language.`;
+
+    try {
+      return await callGemini(FARMER_SYSTEM, prompt);
+    } catch {
+      return 'Weather interpretation unavailable. Check local weather updates for your area.';
     }
-
-    summary += `\n\n🌡️ Optimal temperature for most crops: 18-30°C`;
-
-    return summary;
   },
 
   async getDailySummary(context: DailySummaryContext): Promise<string> {
-    let summary = `Good ${getTimeOfDay()} ${context.userName} 🌅\n\n`;
-    summary += `**📋 Your Farm Summary for Today**\n\n`;
+    const farmInfo = context.farms.map(f => `${f.name} (${f.currentCrop || 'no crop'})`).join(', ');
+    const weatherStr = context.weatherData.map(w =>
+      `${w.condition}, ${w.temperature}°C, humidity ${w.humidity}%, rain ${w.rainChance}%`
+    ).join('; ');
+    const alertsStr = context.farmAlerts.join(', ');
 
-    if (context.farmAlerts.length > 0) {
-      summary += `**⚠️ Active Alerts:**\n`;
-      context.farmAlerts.forEach((a, i) => {
-        summary += `• ${a}\n`;
-      });
-      summary += '\n';
+    const prompt = `Generate a friendly daily farming summary for ${context.userName}.
+Farms: ${farmInfo}
+Weather: ${weatherStr}
+Alerts: ${alertsStr}
+Upcoming harvests: ${JSON.stringify(context.upcomingHarvests)}
+Monthly expenses: ₹${context.totalExpenses || 0}
+
+Provide a concise, actionable morning briefing in simple language. Mention today's key tasks.`;
+
+    try {
+      return await callGemini(FARMER_SYSTEM, prompt);
+    } catch {
+      return `Good ${getTimeOfDay()} ${context.userName}. Daily summary is temporarily unavailable. Check your farm dashboard for updates.`;
     }
-
-    if (context.weatherData.length > 0) {
-      const w = context.weatherData[0];
-      if (w.rainChance > 70) {
-        summary += `🌧️ **Rain expected** for your area (${w.rainChance}%). Irrigation not needed today.\n\n`;
-      } else if (w.rainChance > 40) {
-        summary += `⛅ **Possible rain** (${w.rainChance}%). Monitor conditions before irrigating.\n\n`;
-      } else {
-        summary += `☀️ **No significant rain** expected. Plan irrigation if needed.\n\n`;
-      }
-    }
-
-    if (context.upcomingHarvests.length > 0) {
-      summary += `🌾 **Upcoming Harvests:**\n`;
-      context.upcomingHarvests.slice(0, 2).forEach(h => {
-        summary += `• ${h.crop} at ${h.farmName} — ${h.daysLeft} days remaining\n`;
-      });
-      summary += '\n';
-    }
-
-    summary += `💰 **Monthly Expenses:** ₹${(context.totalExpenses || 0).toLocaleString()}\n`;
-
-    if (context.farms.length > 0) {
-      summary += `\n🌱 **Your Farms:** ${context.farms.length} registered`;
-    }
-
-    return summary;
   },
 
   async getGovernmentSchemeInfo(query: string): Promise<string> {
-    const lower = query.toLowerCase();
+    const prompt = `As an expert on Indian government agriculture schemes, answer this query:
+"${query}"
 
-    if (lower.includes('pm-kisan') || lower.includes('pm kisan') || lower.includes('pmkisan')) {
-      return `🏛️ **PM-KISAN (Pradhan Mantri Kisan Samman Nidhi)**\n\n**What is it?**\nIncome support scheme for all landholding farmers.\n\n**Benefits:**\n• ₹6,000 per year per family\n• Paid in 3 equal installments of ₹2,000\n• Direct bank transfer\n\n**Eligibility:**\n• All farmers with cultivable land\n\n**How to apply:**\n1. Visit pmkisan.gov.in\n2. Register through CSC or agriculture department\n3. Provide Aadhaar and land records\n4. Bank account linked to Aadhaar\n\n**Status check:** SMS 'PMKISAN' to 51969 or check online.`;
+Provide accurate, up-to-date information including: scheme name, benefits, eligibility, how to apply, required documents, and official website links. Use simple language. Disclaimer: "Verify details with your local agriculture office as schemes may be updated periodically."`;
+
+    try {
+      return await callGemini(FARMER_SYSTEM, prompt);
+    } catch {
+      return 'Scheme information is temporarily unavailable. Please visit pmkisan.gov.in or contact your local agriculture office.';
     }
+  },
 
-    if (lower.includes('insurance') || lower.includes('pmfby') || lower.includes('fasal bima')) {
-      return `🏛️ **PMFBY (Pradhan Mantri Fasal Bima Yojana)**\n\n**What is it?**\nCrop insurance scheme to protect farmers from crop loss.\n\n**Benefits:**\n• Coverage for all stages of crop cycle\n• Covers natural calamities, pests, diseases\n\n**Premium:**\n• Kharif: 2% of sum insured\n• Rabi: 1.5% of sum insured\n• Commercial crops: 5%\n\n**Sum Insured:**\n• Equal to Scale of Finance (cost of cultivation)\n• No upper limit\n\n**How to apply:**\nThrough bank branches, CSC, or insurance company agents before the cutoff date.`;
-    }
+  async generateSmartAlerts(farms: FarmAlertContext[], weather: WeatherInterpretationInput): Promise<SmartAlert[]> {
+    const farmStr = farms.map(f => `${f.name}: ${f.currentCrop || 'no crop'}, ${f.soilType} soil, ${f.growthStage || '—'} stage`).join('\n');
+    const prompt = `As a smart farming alert system, analyze these conditions and generate priority alerts:
 
-    if (lower.includes('subsidy') || lower.includes('subsid')) {
-      return `🏛️ **Agriculture Subsidies Available**\n\n**1. Soil Health Card Scheme**\n• Free soil testing\n• Customized fertilizer recommendations\n• Visit your nearest soil testing lab\n\n**2. Farm Mechanization**\n• 50% subsidy on tractors (up to ₹5 lakh)\n• 40% on power tillers\n• 35% on rotavators\n\n**3. Drip Irrigation Subsidy**\n• 50-70% subsidy on drip systems\n• Available through agriculture department\n\n**4. Solar Pump Subsidy**\n• 60-90% subsidy on solar pumps\n• Through MNRE/State Nodal Agencies\n\nContact your district agriculture office for application forms.`;
-    }
+Farms:
+${farmStr}
 
-    if (lower.includes('kcc') || lower.includes('kisan credit') || lower.includes('credit card')) {
-      return `🏛️ **Kisan Credit Card (KCC)**\n\n**What is it?**\nShort-term loan facility for farmers.\n\n**Benefits:**\n• Up to ₹3 lakh without collateral\n• Interest rate: 7% per annum\n• 3% additional rebate for prompt repayment\n• Flexible withdrawal (like credit card)\n• Covers crop production, maintenance, and post-harvest needs\n\n**Documents needed:**\n1. Aadhaar card\n2. Land documents\n3. Passport size photos\n4. Bank account\n\n**Apply at any nationalized bank.**`;
-    }
+Weather:
+- Temperature: ${weather.temperature}°C
+- Humidity: ${weather.humidity}%
+- Rain Chance: ${weather.rainChance}%
+- Wind Speed: ${weather.windSpeed} km/h
+- Condition: ${weather.condition}
 
-    return `🏛️ **Government Agriculture Schemes**\n\nHere are the major schemes for farmers:\n\n**1. PM-KISAN:** ₹6,000/year income support\n**2. PMFBY:** Crop insurance at low premium\n**3. Soil Health Card:** Free soil testing\n**4. KCC:** Loans at 7% interest\n**5. Farm Mechanization:** 50% subsidy on equipment\n**6. Drip Irrigation:** 50-70% subsidy\n**7. Solar Pumps:** 60-90% subsidy\n\nWhich scheme would you like to know more about?`;
+Generate 3-5 most relevant smart alerts. Return valid JSON array ONLY with fields:
+- alertType (one of: "rain","pest","harvest","irrigation","fertilizer","market_price","weather")
+- title (short alert title)
+- description (detailed explanation)
+- severity (one of: "low","medium","high","critical")
+- actionRequired (what the farmer should do)
+
+No other text. Alerts must be specific and actionable.`;
+
+    try {
+      const result = await callGemini(FARMER_SYSTEM, prompt);
+      const jsonMatch = result.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]).map((a: any) => ({
+          ...a,
+          id: `alert_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          createdAt: new Date().toISOString(),
+        }));
+      }
+    } catch {}
+    return [];
+  },
+
+  async getMarketAdvice(input: MarketAdviceInput): Promise<MarketAdviceResult> {
+    const prompt = `As an agricultural market analyst, provide market advice for:
+- Crop: ${input.crop}
+- Location: ${input.location}
+- State: ${input.state}
+- Current Price: ₹${input.currentPrice}/Quintal
+
+Return valid JSON ONLY with fields:
+- bestSellingTime: when the farmer should sell for best price
+- demandForecast: current and expected market demand
+- priceForecast: expected price trend for next 30 days
+- nearbyMarkets: list of 2-3 nearby mandis with distance
+- recommendation: clear actionable advice for the farmer
+
+No other text. Use simple farmer-friendly language.`;
+
+    try {
+      const result = await callGemini(FARMER_SYSTEM, prompt);
+      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+    } catch {}
+    return {
+      bestSellingTime: 'Unable to fetch advice',
+      demandForecast: '—',
+      priceForecast: '—',
+      nearbyMarkets: '—',
+      recommendation: 'Please consult your local mandi for current prices.',
+    };
   },
 };
 

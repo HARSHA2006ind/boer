@@ -1,27 +1,44 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, shadows } from '../../theme';
-
-const MOCK_SCHEMES: Record<string, any> = {
-  '1': { name: 'PM-KISAN Samman Nidhi', description: 'Income support of ₹6,000/year to all landholding farmers.', benefits: '₹6,000 per year in 3 equal installments of ₹2,000 each. Direct bank transfer to Aadhaar-linked accounts.', eligibility: 'All landholding farmer families with cultivable land. Family includes husband, wife, and minor children.', website: 'https://pmkisan.gov.in', process: '1. Visit pmkisan.gov.in\n2. Register through CSC or agriculture department\n3. Provide Aadhaar and land records\n4. Link bank account to Aadhaar\n5. Receive installment directly', documents: 'Aadhaar Card, Land Records, Bank Account Details, Passport Size Photo' },
-};
-
-const SECTIONS = [
-  { icon: 'information-circle', label: 'Description', color: '#3B82F6' },
-  { icon: 'gift', label: 'Benefits', color: '#3BA55D' },
-  { icon: 'people', label: 'Eligibility', color: '#F59E0B' },
-  { icon: 'globe', label: 'Website', color: '#8B5CF6' },
-  { icon: 'list', label: 'Application Process', color: colors.primary },
-  { icon: 'document-text', label: 'Required Documents', color: '#EC4899' },
-];
+import { fetchSchemeById } from '../../services/schemeService';
+import { GovernmentScheme } from '../../types';
 
 interface Props { navigation: any; route: any }
 
 export default function SchemeDetailScreen({ navigation, route }: Props) {
   const { schemeId } = route.params;
   const insets = useSafeAreaInsets();
-  const scheme = MOCK_SCHEMES[schemeId] || MOCK_SCHEMES['1'];
+  const [scheme, setScheme] = useState<GovernmentScheme | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadScheme();
+  }, []);
+
+  const loadScheme = async () => {
+    const data = await fetchSchemeById(schemeId);
+    setScheme(data || null);
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!scheme) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: colors.textLight }}>Scheme not found</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -55,8 +72,7 @@ export default function SchemeDetailScreen({ navigation, route }: Props) {
           { icon: 'information-circle', label: 'Description', content: scheme.description, color: '#3B82F6' },
           { icon: 'gift', label: 'Benefits', content: scheme.benefits, color: '#3BA55D' },
           { icon: 'people', label: 'Eligibility', content: scheme.eligibility, color: '#F59E0B' },
-          { icon: 'list', label: 'Application Process', content: scheme.process, color: colors.primary },
-          { icon: 'document-text', label: 'Required Documents', content: scheme.documents, color: '#EC4899' },
+          { icon: 'list', label: 'Application Process', content: scheme.application_process, color: colors.primary },
         ].map((section, i) => (
           <View key={i} style={styles.card}>
             <View style={styles.sectionHeader}>
@@ -69,10 +85,12 @@ export default function SchemeDetailScreen({ navigation, route }: Props) {
           </View>
         ))}
 
-        <TouchableOpacity style={styles.websiteBtn} onPress={() => scheme.website && Linking.openURL(scheme.website)}>
-          <Ionicons name="globe" size={18} color="#FFFFFF" />
-          <Text style={styles.websiteText}>Visit Official Website</Text>
-        </TouchableOpacity>
+        {scheme.website_url ? (
+          <TouchableOpacity style={styles.websiteBtn} onPress={() => Linking.openURL(scheme.website_url!)}>
+            <Ionicons name="globe" size={18} color="#FFFFFF" />
+            <Text style={styles.websiteText}>Visit Official Website</Text>
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </View>
   );

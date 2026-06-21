@@ -1,4 +1,4 @@
-import { geminiProvider, GeminiConfig } from './geminiProvider';
+import { geminiProvider } from './geminiProvider';
 
 export type AIProviderType = 'gemini' | 'openai' | 'claude';
 
@@ -12,6 +12,16 @@ export interface AIProvider {
   interpretWeather(weatherData: WeatherInterpretationInput): Promise<string>;
   getDailySummary(context: DailySummaryContext): Promise<string>;
   getGovernmentSchemeInfo(query: string): Promise<string>;
+  generateSmartAlerts(farms: FarmAlertContext[], weather: WeatherInterpretationInput): Promise<SmartAlert[]>;
+  getMarketAdvice(input: MarketAdviceInput): Promise<MarketAdviceResult>;
+}
+
+export interface FarmAlertContext {
+  name: string;
+  currentCrop: string;
+  soilType: string;
+  waterSource: string;
+  growthStage: string;
 }
 
 export interface CropRecommendationInput {
@@ -73,6 +83,31 @@ export interface WeatherInterpretationInput {
   rainChance: number;
   windSpeed: number;
   condition: string;
+}
+
+export interface SmartAlert {
+  id: string;
+  alertType: 'rain' | 'pest' | 'harvest' | 'irrigation' | 'fertilizer' | 'market_price' | 'weather';
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  actionRequired: string;
+  createdAt: string;
+}
+
+export interface MarketAdviceInput {
+  crop: string;
+  location: string;
+  currentPrice: number;
+  state: string;
+}
+
+export interface MarketAdviceResult {
+  bestSellingTime: string;
+  demandForecast: string;
+  priceForecast: string;
+  nearbyMarkets: string;
+  recommendation: string;
 }
 
 export interface DailySummaryContext {

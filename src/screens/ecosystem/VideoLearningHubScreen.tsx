@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, shadows } from '../../theme';
 
@@ -21,11 +22,13 @@ const CATEGORIES = ['All', 'Rice Farming', 'Vegetable Farming', 'Fruit Farming',
 interface Props { navigation: any }
 
 export default function VideoLearningHubScreen({ navigation }: Props) {
+  const insets = useSafeAreaInsets();
   const [activeCat, setActiveCat] = useState('All');
   const filtered = activeCat === 'All' ? VIDEOS : VIDEOS.filter(v => v.category === activeCat);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
         {CATEGORIES.map(cat => {
           const active = activeCat === cat;
@@ -55,6 +58,7 @@ export default function VideoLearningHubScreen({ navigation }: Props) {
         ))}
       </View>
     </ScrollView>
+    </View>
   );
 }
 

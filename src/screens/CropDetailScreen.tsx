@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getCrop, deleteCrop } from '../services/cropService';
 import { Crop } from '../types';
@@ -13,6 +14,7 @@ interface Props { navigation: any; route: any }
 
 export default function CropDetailScreen({ navigation, route }: Props) {
   const { cropId } = route.params;
+  const insets = useSafeAreaInsets();
   const [crop, setCrop] = useState<Crop | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -35,7 +37,7 @@ export default function CropDetailScreen({ navigation, route }: Props) {
   if (!crop) return <Loading fullScreen message="Crop not found" />;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { paddingTop: insets.top }]} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]}>
       <LinearGradient colors={['#D4A843', '#E8B84A', '#F0D68A']} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
         <View style={styles.heroOverlay}>
           <Text style={styles.cropIcon}>🌱</Text>

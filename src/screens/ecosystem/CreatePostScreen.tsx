@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, shadows } from '../../theme';
+import { createPost } from '../../services/communityService';
 
 const POST_TYPES = [
-  { key: 'text', icon: 'document-text', label: 'Post' },
-  { key: 'question', icon: 'help-circle', label: 'Question' },
-  { key: 'success_story', icon: 'star', label: 'Success Story' },
-  { key: 'pest_alert', icon: 'warning', label: 'Pest Alert' },
-  { key: 'tip', icon: 'bulb', label: 'Tip' },
-] as const;
+  { key: 'text', icon: 'document-text' as const, label: 'Post' },
+  { key: 'question', icon: 'help-circle' as const, label: 'Question' },
+  { key: 'success_story', icon: 'star' as const, label: 'Success Story' },
+  { key: 'pest_alert', icon: 'warning' as const, label: 'Pest Alert' },
+  { key: 'tip', icon: 'bulb' as const, label: 'Tip' },
+];
 
 interface Props { navigation: any }
 
@@ -18,11 +19,19 @@ export default function CreatePostScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const [content, setContent] = useState('');
   const [postType, setPostType] = useState('text');
+  const [posting, setPosting] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!content.trim()) { Alert.alert('Please write something'); return; }
-    Alert.alert('Posted!', 'Your post has been shared with the community.');
-    navigation.goBack();
+    setPosting(true);
+    const success = await createPost(content.trim(), postType);
+    setPosting(false);
+    if (success) {
+      Alert.alert('Posted!', 'Your post has been shared with the community.');
+      navigation.goBack();
+    } else {
+      Alert.alert('Error', 'Could not create post. Please try again.');
+    }
   };
 
   return (
@@ -32,8 +41,8 @@ export default function CreatePostScreen({ navigation }: Props) {
           <Ionicons name="close" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create Post</Text>
-        <TouchableOpacity style={[styles.postBtn, !content.trim() && styles.postBtnDisabled]} onPress={handleSubmit} disabled={!content.trim()}>
-          <Text style={styles.postBtnText}>Post</Text>
+        <TouchableOpacity style={[styles.postBtn, (!content.trim() || posting) && styles.postBtnDisabled]} onPress={handleSubmit} disabled={!content.trim() || posting}>
+          {posting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.postBtnText}>Post</Text>}
         </TouchableOpacity>
       </View>
 
@@ -44,7 +53,7 @@ export default function CreatePostScreen({ navigation }: Props) {
             const active = postType === pt.key;
             return (
               <TouchableOpacity key={pt.key} style={[styles.typeChip, active && styles.typeActive]} onPress={() => setPostType(pt.key)}>
-                <Ionicons name={pt.icon as any} size={14} color={active ? '#FFFFFF' : colors.textSecondary} />
+                <Ionicons name={pt.icon} size={14} color={active ? '#FFFFFF' : colors.textSecondary} />
                 <Text style={[styles.typeLabel, active && styles.typeLabelActive]}>{pt.label}</Text>
               </TouchableOpacity>
             );
@@ -71,7 +80,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.secondary, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
-  postBtn: { backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  postBtn: { backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minWidth: 60, alignItems: 'center' },
   postBtnDisabled: { backgroundColor: colors.textLight },
   postBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
   content: { padding: spacing.md },

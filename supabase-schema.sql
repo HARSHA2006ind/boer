@@ -252,6 +252,151 @@ CREATE POLICY "Authenticated users can create alerts"
   ON regional_alerts FOR INSERT
   WITH CHECK (auth.role() = 'authenticated');
 
+-- 11. ai_chats
+CREATE TABLE IF NOT EXISTS ai_chats (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  farm_id uuid REFERENCES farms(id) ON DELETE SET NULL,
+  title text NOT NULL DEFAULT 'New Chat',
+  message_count integer DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE ai_chats ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own chats" ON ai_chats;
+CREATE POLICY "Users can manage their own chats"
+  ON ai_chats FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 12. chat_messages
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  chat_id uuid NOT NULL REFERENCES ai_chats(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role text NOT NULL CHECK (role IN ('user', 'ai')),
+  text text NOT NULL,
+  image_url text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own messages" ON chat_messages;
+CREATE POLICY "Users can manage their own messages"
+  ON chat_messages FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 13. disease_scans
+CREATE TABLE IF NOT EXISTS disease_scans (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  farm_id uuid REFERENCES farms(id) ON DELETE SET NULL,
+  crop_id uuid REFERENCES crops(id) ON DELETE SET NULL,
+  image_url text NOT NULL DEFAULT '',
+  disease_name text NOT NULL DEFAULT '',
+  confidence text DEFAULT '',
+  symptoms text NOT NULL DEFAULT '',
+  treatment text NOT NULL DEFAULT '',
+  prevention text NOT NULL DEFAULT '',
+  severity text DEFAULT 'medium' CHECK (severity IN ('low','medium','high','critical')),
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE disease_scans ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own scans" ON disease_scans;
+CREATE POLICY "Users can manage their own scans"
+  ON disease_scans FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 14. crop_recommendations
+CREATE TABLE IF NOT EXISTS crop_recommendations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  farm_id uuid REFERENCES farms(id) ON DELETE SET NULL,
+  input_data jsonb NOT NULL DEFAULT '{}',
+  results jsonb NOT NULL DEFAULT '[]',
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE crop_recommendations ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own recommendations" ON crop_recommendations;
+CREATE POLICY "Users can manage their own recommendations"
+  ON crop_recommendations FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 15. irrigation_advice
+CREATE TABLE IF NOT EXISTS irrigation_advice (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  farm_id uuid REFERENCES farms(id) ON DELETE SET NULL,
+  crop text NOT NULL DEFAULT '',
+  soil_type text DEFAULT '',
+  growth_stage text DEFAULT '',
+  action text NOT NULL DEFAULT '',
+  reason text NOT NULL DEFAULT '',
+  estimated_water text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE irrigation_advice ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own irrigation advice" ON irrigation_advice;
+CREATE POLICY "Users can manage their own irrigation advice"
+  ON irrigation_advice FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 16. fertilizer_advice
+CREATE TABLE IF NOT EXISTS fertilizer_advice (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  farm_id uuid REFERENCES farms(id) ON DELETE SET NULL,
+  crop text NOT NULL DEFAULT '',
+  soil_type text DEFAULT '',
+  growth_stage text DEFAULT '',
+  recommendation text NOT NULL DEFAULT '',
+  timing text DEFAULT '',
+  organic_alternatives text DEFAULT '',
+  nutrients text DEFAULT '',
+  disclaimer text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE fertilizer_advice ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own fertilizer advice" ON fertilizer_advice;
+CREATE POLICY "Users can manage their own fertilizer advice"
+  ON fertilizer_advice FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- 17. scheme_queries
+CREATE TABLE IF NOT EXISTS scheme_queries (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  query text NOT NULL DEFAULT '',
+  response text NOT NULL DEFAULT '',
+  state text DEFAULT '',
+  farmer_category text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE scheme_queries ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own scheme queries" ON scheme_queries;
+CREATE POLICY "Users can manage their own scheme queries"
+  ON scheme_queries FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_community_posts_type ON community_posts(post_type);
 CREATE INDEX IF NOT EXISTS idx_community_posts_created ON community_posts(created_at DESC);
@@ -263,3 +408,54 @@ CREATE INDEX IF NOT EXISTS idx_learning_articles_category ON learning_articles(c
 CREATE INDEX IF NOT EXISTS idx_regional_alerts_type ON regional_alerts(type);
 CREATE INDEX IF NOT EXISTS idx_regional_alerts_severity ON regional_alerts(severity);
 CREATE INDEX IF NOT EXISTS idx_regional_alerts_area ON regional_alerts(affected_area);
+
+-- 18. smart_alerts
+CREATE TABLE IF NOT EXISTS smart_alerts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  farm_id uuid REFERENCES farms(id) ON DELETE SET NULL,
+  alert_type text NOT NULL CHECK (alert_type IN ('rain','pest','harvest','irrigation','fertilizer','market_price','weather')),
+  title text NOT NULL,
+  description text NOT NULL DEFAULT '',
+  severity text NOT NULL DEFAULT 'medium' CHECK (severity IN ('low','medium','high','critical')),
+  action_required text DEFAULT '',
+  is_read boolean DEFAULT false,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE smart_alerts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own smart alerts" ON smart_alerts;
+CREATE POLICY "Users can manage their own smart alerts"
+  ON smart_alerts FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS idx_smart_alerts_user ON smart_alerts(user_id);
+CREATE INDEX IF NOT EXISTS idx_smart_alerts_type ON smart_alerts(alert_type);
+CREATE INDEX IF NOT EXISTS idx_smart_alerts_created ON smart_alerts(created_at DESC);
+
+-- 19. market_advice
+CREATE TABLE IF NOT EXISTS market_advice (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  farm_id uuid REFERENCES farms(id) ON DELETE SET NULL,
+  crop_name text NOT NULL DEFAULT '',
+  current_price numeric DEFAULT 0,
+  demand_level text DEFAULT 'medium' CHECK (demand_level IN ('low','medium','high')),
+  best_selling_time text DEFAULT '',
+  price_forecast text DEFAULT '',
+  demand_forecast text DEFAULT '',
+  nearby_markets text DEFAULT '',
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE market_advice ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own market advice" ON market_advice;
+CREATE POLICY "Users can manage their own market advice"
+  ON market_advice FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS idx_market_advice_user ON market_advice(user_id);

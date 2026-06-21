@@ -1,111 +1,225 @@
-import { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from 'react-native';
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, LayoutChangeEvent } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, FadeInDown } from 'react-native-reanimated';
 import { MainTabParamList } from '../types';
 import HomeDashboard from '../screens/HomeDashboard';
 import FarmStack from './FarmStack';
 import FinanceStack from './FinanceStack';
-import AIStack from './AIStack';
+import MarketScreen from '../screens/MarketScreen';
 import EcosystemStack from './EcosystemStack';
-import { colors, radius, spacing, shadows } from '../theme';
 import { useLanguage } from '../i18n/LanguageContext';
+import Loading from '../components/Loading';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-type IconName = React.ComponentProps<typeof Ionicons>['name'];
+const ACTIVE_COLOR = '#2F5D50';
+const BAR_BG = 'rgba(253,252,248,0.96)';
+const PILL_SIZE = 44;
 
-const TAB_ICONS: Record<string, { active: IconName; inactive: IconName }> = {
+const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   Home: { active: 'home', inactive: 'home-outline' },
   Farms: { active: 'leaf', inactive: 'leaf-outline' },
   Finance: { active: 'wallet', inactive: 'wallet-outline' },
-  AI: { active: 'sparkles', inactive: 'sparkles-outline' },
+  Market: { active: 'trending-up', inactive: 'trending-up-outline' },
   Ecosystem: { active: 'planet', inactive: 'planet-outline' },
 };
 
-const TAB_KEYS: Record<string, string> = {
+const TAB_LABELS: Record<string, string> = {
   Home: 'nav.home',
   Farms: 'nav.farms',
   Finance: 'nav.finance',
-  AI: 'nav.ai',
+  Market: 'nav.market',
   Ecosystem: 'nav.ecosystem',
 };
 
-function TabButton({ routeName, focused, onPress }: { routeName: string; focused: boolean; onPress: (e: any) => void }) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const { t } = useLanguage();
-  const icons = TAB_ICONS[routeName] || { active: 'ellipse', inactive: 'ellipse-outline' };
-
-  useEffect(() => {
-    Animated.spring(scale, {
-      toValue: focused ? 1 : 0.92, useNativeDriver: true, friction: 8, tension: 80,
-    }).start();
-  }, [focused]);
-
-  const labelKey = TAB_KEYS[routeName] || routeName;
-
+function TabScreenWrapper({ children }: { children: React.ReactNode }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={tStyles.item}>
-      <Animated.View style={[tStyles.iconWrap, focused && tStyles.iconWrapActive, { transform: [{ scale }] }]}>
-        <Ionicons name={focused ? icons.active : icons.inactive} size={20} color={focused ? '#FFFFFF' : colors.textSecondary} />
-      </Animated.View>
-      <Text style={[tStyles.label, focused && tStyles.labelActive]}>{t(labelKey)}</Text>
-    </TouchableOpacity>
+    <Animated.View style={{ flex: 1 }} entering={FadeInDown.duration(300).springify().damping(22)}>
+      {children}
+    </Animated.View>
   );
 }
 
-const tStyles = StyleSheet.create({
-  item: { alignItems: 'center', justifyContent: 'center', flex: 1, paddingTop: 6 },
-  iconWrap: { width: 36, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-  iconWrapActive: { backgroundColor: colors.primary },
-  label: { fontSize: 9, fontWeight: '600', color: colors.textLight, marginTop: 2, textAlign: 'center' },
-  labelActive: { color: colors.primary, fontWeight: '800' },
-});
+function withTabTransition(Component: React.ComponentType<any>): React.ComponentType<any> {
+  return function TabTransition(props: any) {
+    return (
+      <TabScreenWrapper>
+        <Component {...props} />
+      </TabScreenWrapper>
+    );
+  };
+}
 
-export default function MainTabs() {
-  const insets = useSafeAreaInsets();
-  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 4 : 8);
+function SlidingPill({ barWidth, activeIndex }: { barWidth: number; activeIndex: number; prevIndex: number }) {
+  const tabWidth = barWidth / 5;
+  const offset = tabWidth / 2 - PILL_SIZE / 2;
+  const targetX = activeIndex * tabWidth + offset;
+
+  const translateX = useSharedValue(targetX);
+
+  useEffect(() => {
+    translateX.value = withSpring(targetX, { damping: 14, stiffness: 200, mass: 0.6 });
+  }, [targetX]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: withSpring(1, { damping: 20, stiffness: 300 }),
+  }));
 
   return (
-    <View style={{ flex: 1 }}>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          tabBarStyle: {
-            ...tabBarStyles.container,
-            bottom: bottomInset + spacing.sm,
+    <Animated.View style={[pillStyle, { position: 'absolute', bottom: 18 }]}>
+      <Animated.View
+        style={[
+          {
+            width: PILL_SIZE,
+            height: PILL_SIZE,
+            borderRadius: PILL_SIZE / 2,
+            backgroundColor: ACTIVE_COLOR,
+            shadowColor: ACTIVE_COLOR,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.5,
+            shadowRadius: 12,
+            elevation: 8,
           },
-          tabBarShowLabel: false,
-          tabBarHideOnKeyboard: true,
-          tabBarButton: ({ onPress, accessibilityState }) => (
-            <TabButton routeName={route.name} focused={accessibilityState?.selected || false} onPress={onPress || (() => {})} />
-          ),
+          glowStyle,
+        ]}
+      />
+    </Animated.View>
+  );
+}
+
+function CustomTabBar({ state, navigation }: any) {
+  const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
+  const [barWidth, setBarWidth] = useState(0);
+  const [prevIndex, setPrevIndex] = useState(0);
+
+  const onBarLayout = useCallback((e: LayoutChangeEvent) => {
+    setBarWidth(e.nativeEvent.layout.width);
+  }, []);
+
+  const activeIndex = state.index;
+  useEffect(() => {
+    if (activeIndex !== prevIndex) setPrevIndex(activeIndex);
+  }, [activeIndex]);
+
+  return (
+    <View
+      style={[
+        tabBarStyles.container,
+        {
+          bottom: Platform.OS === 'ios'
+            ? Math.max(insets.bottom - 6, 6)
+            : Math.max(insets.bottom, 6),
+        },
+      ]}
+    >
+      <View onLayout={onBarLayout} style={tabBarStyles.inner}>
+        {state.routes.map((route: any, index: number) => {
+          const focused = state.index === index;
+          const icons = TAB_ICONS[route.name] || { active: 'ellipse', inactive: 'ellipse-outline' };
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          const iconName = focused ? icons.active : icons.inactive;
+          const iconColor = focused ? '#FFFFFF' : 'rgba(47,93,80,0.3)';
+          const labelColor = focused ? ACTIVE_COLOR : 'rgba(47,93,80,0.3)';
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={onPress}
+              activeOpacity={1}
+              style={tStyles.item}
+            >
+              <View style={[tStyles.iconWrap, focused && tStyles.iconWrapActive]}>
+                <Ionicons name={iconName} size={22} color={iconColor} />
+              </View>
+              <Text style={[tStyles.label, { color: labelColor }]}>
+                {t(TAB_LABELS[route.name] || route.name)}
+              </Text>
+            </TouchableOpacity>
+          );
         })}
-      >
-        <Tab.Screen name="Home" component={HomeDashboard} />
-        <Tab.Screen name="Farms" component={FarmStack} />
-        <Tab.Screen name="Finance" component={FinanceStack} />
-        <Tab.Screen name="AI" component={AIStack} />
-        <Tab.Screen name="Ecosystem" component={EcosystemStack} />
-      </Tab.Navigator>
+        {barWidth > 0 && (
+          <SlidingPill barWidth={barWidth} activeIndex={state.index} prevIndex={prevIndex} />
+        )}
+      </View>
     </View>
   );
 }
 
+export default function MainTabs() {
+  return (
+    <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false, tabBarHideOnKeyboard: true }}
+    >
+      <Tab.Screen name="Home" component={withTabTransition(HomeDashboard)} />
+      <Tab.Screen name="Farms" component={withTabTransition(FarmStack)} />
+      <Tab.Screen name="Finance" component={withTabTransition(FinanceStack)} />
+      <Tab.Screen name="Market" component={withTabTransition(MarketScreen)} />
+      <Tab.Screen name="Ecosystem" component={withTabTransition(EcosystemStack)} />
+    </Tab.Navigator>
+  );
+}
+
+const tStyles = StyleSheet.create({
+  item: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    paddingTop: 4,
+  },
+  iconWrap: {
+    width: PILL_SIZE,
+    height: PILL_SIZE,
+    borderRadius: PILL_SIZE / 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconWrapActive: {},
+  label: {
+    fontSize: 9,
+    fontWeight: '700',
+    marginTop: 2,
+    textAlign: 'center',
+    letterSpacing: 0.2,
+  },
+});
+
 const tabBarStyles = StyleSheet.create({
   container: {
     position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
-    backgroundColor: '#FDFCF8',
-    borderRadius: radius.pill,
-    height: 60,
-    paddingBottom: 0,
-    borderTopWidth: 0,
+    left: 12,
+    right: 12,
+  },
+  inner: {
+    flexDirection: 'row',
+    backgroundColor: BAR_BG,
+    borderRadius: 28,
+    height: 64,
     borderWidth: 1,
-    borderColor: 'rgba(229,231,235,0.8)',
-    ...shadows.md,
-    elevation: 6,
+    borderColor: 'rgba(47,93,80,0.06)',
+    shadowColor: '#2F5D50',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 18,
+    elevation: 10,
   },
 });

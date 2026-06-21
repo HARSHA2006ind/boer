@@ -1,139 +1,212 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, radius, shadows } from '../theme';
-import { getAIProvider, CropRecommendation, CropRecommendationInput } from '../ai/aiProvider';
-import Card from '../components/Card';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabase';
+import { getAIProvider, CropRecommendationInput } from '../ai/aiProvider';
+import { saveRecommendation, getRecentRecommendations } from '../services/aiStorage';
+import { useWeather } from '../hooks/useWeather';
 
 interface Props { navigation: any }
 
-const SOIL_TYPES = ['Clay Loam', 'Sandy Loam', 'Loamy', 'Black Cotton', 'Red Soil', 'Laterite', 'Alluvial'];
-const WATER_SOURCES = ['Rainfed', 'Borewell', 'Well', 'Canal', 'Drip Irrigation', 'None'];
-const SEASONS = ['Kharif (June-Oct)', 'Rabi (Nov-Mar)', 'Zaid (Summer)', 'All Season'];
+const SOIL_TYPES = ['Loamy', 'Clay', 'Sandy', 'Silty', 'Black Cotton', 'Red', 'Laterite', 'Alluvial'];
+const WATER_SOURCES = ['Rainfed', 'Canal', 'Borewell', 'Well', 'Drip', 'Sprinkler', 'Tank', 'None'];
+const SEASONS = ['Kharif', 'Rabi', 'Zaid', 'Summer', 'Winter', 'Round the Year'];
 
 export default function CropRecommendationScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [soilType, setSoilType] = useState('');
   const [waterSource, setWaterSource] = useState('');
   const [season, setSeason] = useState('');
+  const [landArea, setLandArea] = useState('');
+  const [location, setLocation] = useState('');
   const [loading, setLoading] = useState(false);
-  const [recommendations, setRecommendations] = useState<CropRecommendation[]>([]);
+  const [results, setResults] = useState<any[]>([]);
+  const [error, setError] = useState('');
+  const [history, setHistory] = useState<any[]>([]);
+  const [farms, setFarms] = useState<any[]>([]);
+  const [selectedFarm, setSelectedFarm] = useState<any>(null);
+  const defaultFarm = farms[0];
+  const weatherLocation = defaultFarm ? [defaultFarm.village, defaultFarm.district, defaultFarm.state].filter(Boolean).join(', ') : undefined;
+  const { weather } = useWeather(weatherLocation, defaultFarm?.name);
 
-  async function getRecommendations() {
-    if (!soilType || !waterSource || !season) {
-      Alert.alert('Missing Info', 'Please select soil type, water source, and season.');
-      return;
+  useEffect(() => { if (user) { fetchFarms(); loadHistory(); } }, [user]);
+
+  async function fetchFarms() {
+    if (!user) return;
+    const { data } = await supabase.from('farms').select('*').eq('user_id', user.id);
+    if (data) {
+      setFarms(data);
+      if (data.length > 0) {
+        setSelectedFarm(data[0]);
+        setSoilType(data[0].soil_type || '');
+        setWaterSource(data[0].water_source || '');
+        setLocation([data[0].village, data[0].district, data[0].state].filter(Boolean).join(', '));
+      }
     }
-    setLoading(true);
+  }
+
+  async function loadHistory() {
+    if (!user) return;
+    const h = await getRecentRecommendations(user.id, 'crop_recommendation');
+    setHistory(h);
+  }
+
+  async function recommend() {
+    if (!soilType || !waterSource || !season) { setError('Please select all options'); return; }
+    setLoading(true); setError(''); setResults([]);
+
+    const input: CropRecommendationInput = {
+      soilType, waterSource, season, landArea: parseFloat(landArea) || 0, location,
+    };
+
     try {
       const provider = getAIProvider();
-      const input: CropRecommendationInput = {
-        soilType,
-        location: 'Telangana',
-        waterSource,
-        season,
-        landArea: 1,
-      };
-      const result = await provider.recommendCrops(input);
-      setRecommendations(result);
-    } catch {
-      Alert.alert('Error', 'Failed to get recommendations. Please try again.');
+      const res = await provider.recommendCrops(input);
+      setResults(res);
+      if (user) {
+        await saveRecommendation(user.id, 'crop_recommendation', JSON.stringify(input), JSON.stringify(res));
+        await loadHistory();
+      }
+    } catch (e: any) {
+      setError(e.message || 'Failed to get recommendations');
     }
     setLoading(false);
   }
 
-  function getDifficultyColor(d: string): string {
-    if (d.toLowerCase().includes('easy')) return colors.success;
-    if (d.toLowerCase().includes('medium')) return colors.warning;
-    return colors.error;
+  function useFarmData(farm: any) {
+    setSelectedFarm(farm);
+    setSoilType(farm.soil_type || '');
+    setWaterSource(farm.water_source || '');
+    setLocation([farm.village, farm.district, farm.state].filter(Boolean).join(', '));
   }
 
+  const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32', '#8B7355', '#6B7280'];
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <LinearGradient colors={[colors.primaryDark, colors.primary]} style={styles.header}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>🌾 Crop Recommendation</Text>
-          <View style={styles.backBtn} />
-        </View>
-        <Text style={styles.headerSub}>AI-powered crop suggestions based on your farm conditions</Text>
-      </LinearGradient>
-
-      <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 100 }]}>
-        <Card title="1. Select Soil Type">
-          <View style={styles.optionGrid}>
-            {SOIL_TYPES.map(s => (
-              <TouchableOpacity key={s} style={[styles.optionChip, soilType === s && styles.optionChipActive]} onPress={() => setSoilType(s)}>
-                <Text style={[styles.optionText, soilType === s && styles.optionTextActive]}>{s}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Card>
-
-        <Card title="2. Select Water Source">
-          <View style={styles.optionGrid}>
-            {WATER_SOURCES.map(w => (
-              <TouchableOpacity key={w} style={[styles.optionChip, waterSource === w && styles.optionChipActive]} onPress={() => setWaterSource(w)}>
-                <Text style={[styles.optionText, waterSource === w && styles.optionTextActive]}>{w}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Card>
-
-        <Card title="3. Select Season">
-          <View style={styles.optionGrid}>
-            {SEASONS.map(s => (
-              <TouchableOpacity key={s} style={[styles.optionChip, season === s && styles.optionChipActive]} onPress={() => setSeason(s)}>
-                <Text style={[styles.optionText, season === s && styles.optionTextActive]}>{s}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </Card>
-
-        <TouchableOpacity style={styles.recommendBtn} onPress={getRecommendations} disabled={loading}>
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.recommendBtnText}>🌱 Get Crop Recommendations</Text>
-          )}
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>Crop Recommendation</Text>
+        <View style={{ width: 36 }} />
+      </View>
 
-        {recommendations.length > 0 && (
-          <>
-            <Text style={styles.resultTitle}>🏆 Top 3 Recommended Crops</Text>
-            {recommendations.map((crop, i) => (
-              <Card key={i}>
-                <View style={styles.cropCard}>
-                  <View style={styles.cropHeader}>
-                    <Text style={styles.cropRank}>#{i + 1}</Text>
-                    <Text style={styles.cropName}>{crop.name}</Text>
-                  </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + spacing.xxl }]}
+        refreshControl={<RefreshControl refreshing={false} onRefresh={loadHistory} />}>
+        {farms.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.sectionLabel}>Your Farms</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {farms.map(f => (
+                <TouchableOpacity key={f.id} style={[styles.farmChip, selectedFarm?.id === f.id && styles.farmChipActive]}
+                  onPress={() => useFarmData(f)}>
+                  <Ionicons name="leaf" size={14} color={selectedFarm?.id === f.id ? '#FFF' : colors.primary} />
+                  <Text style={[styles.farmChipText, selectedFarm?.id === f.id && styles.farmChipTextActive]}>{f.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Farm Conditions</Text>
+
+          <Text style={styles.label}>Soil Type</Text>
+          <View style={styles.chipGrid}>
+            {SOIL_TYPES.map(s => (
+              <TouchableOpacity key={s} style={[styles.chip, soilType === s && styles.chipActive]}
+                onPress={() => setSoilType(s)}>
+                <Text style={[styles.chipText, soilType === s && styles.chipTextActive]}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.label}>Water Source</Text>
+          <View style={styles.chipGrid}>
+            {WATER_SOURCES.map(w => (
+              <TouchableOpacity key={w} style={[styles.chip, waterSource === w && styles.chipActive]}
+                onPress={() => setWaterSource(w)}>
+                <Text style={[styles.chipText, waterSource === w && styles.chipTextActive]}>{w}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.label}>Season</Text>
+          <View style={styles.chipGrid}>
+            {SEASONS.map(s => (
+              <TouchableOpacity key={s} style={[styles.chip, season === s && styles.chipActive]}
+                onPress={() => setSeason(s)}>
+                <Text style={[styles.chipText, season === s && styles.chipTextActive]}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TextInput style={styles.landInput} value={landArea} onChangeText={setLandArea}
+            placeholder="Land area (acres) — optional" placeholderTextColor={colors.textLight} keyboardType="numeric" />
+
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+
+          <TouchableOpacity style={styles.recommendBtn} onPress={recommend} disabled={loading}>
+            {loading ? <ActivityIndicator color="#FFF" /> : (
+              <><Ionicons name="leaf-outline" size={18} color="#FFF" /><Text style={styles.recommendBtnText}> Get Recommendations</Text></>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {results.length > 0 && (
+          <View style={styles.resultsSection}>
+            <Text style={styles.resultsTitle}>Recommended Crops</Text>
+            {results.map((crop, i) => (
+              <View key={i} style={[styles.cropCard, { borderLeftColor: rankColors[i] || '#6B7280', borderLeftWidth: 4 }]}>
+                <View style={styles.rankBadge}>
+                  <Text style={styles.rankText}>{i + 1}</Text>
+                </View>
+                <View style={styles.cropInfo}>
+                  <Text style={styles.cropName}>{crop.name}</Text>
                   <View style={styles.cropDetails}>
-                    <View style={styles.cropDetailRow}>
-                      <Text style={styles.cropLabel}>💧 Water</Text>
-                      <Text style={styles.cropValue}>{crop.waterRequirement}</Text>
+                    <View style={styles.cropDetail}>
+                      <Ionicons name="water-outline" size={14} color={colors.info} />
+                      <Text style={styles.cropDetailText}>{crop.waterRequirement}</Text>
                     </View>
-                    <View style={styles.cropDetailRow}>
-                      <Text style={styles.cropLabel}>💰 Profit</Text>
-                      <Text style={[styles.cropValue, { color: colors.success }]}>{crop.profitPotential}</Text>
+                    <View style={styles.cropDetail}>
+                      <Ionicons name="cash-outline" size={14} color={colors.success} />
+                      <Text style={styles.cropDetailText}>{crop.profitPotential}</Text>
                     </View>
-                    <View style={styles.cropDetailRow}>
-                      <Text style={styles.cropLabel}>📊 Difficulty</Text>
-                      <Text style={[styles.cropValue, { color: getDifficultyColor(crop.difficulty) }]}>{crop.difficulty}</Text>
+                    <View style={styles.cropDetail}>
+                      <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+                      <Text style={styles.cropDetailText}>{crop.harvestDuration}</Text>
                     </View>
-                    <View style={styles.cropDetailRow}>
-                      <Text style={styles.cropLabel}>⏱️ Duration</Text>
-                      <Text style={styles.cropValue}>{crop.harvestDuration}</Text>
+                    <View style={styles.cropDetail}>
+                      <Ionicons name="analytics-outline" size={14} color={colors.warning} />
+                      <Text style={styles.cropDetailText}>{crop.difficulty}</Text>
                     </View>
                   </View>
                 </View>
-              </Card>
+              </View>
             ))}
-          </>
+          </View>
+        )}
+
+        {history.length > 0 && results.length === 0 && (
+          <View style={styles.historySection}>
+            <Text style={styles.historyTitle}>Recent Recommendations</Text>
+            {history.slice(0, 3).map((h, i) => {
+              let data;
+              try { data = JSON.parse(h.results); } catch { data = null; }
+              return (
+                <TouchableOpacity key={i} style={styles.historyItem} onPress={() => { if (data) setResults(data); }}>
+                  <Ionicons name="time-outline" size={14} color={colors.textLight} />
+                  <Text style={styles.historyDate}>{new Date(h.created_at).toLocaleDateString()}</Text>
+                  <Text style={styles.historyText} numberOfLines={1}>{data?.[0]?.name || 'Recommendations'}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         )}
       </ScrollView>
     </View>
@@ -141,27 +214,41 @@ export default function CropRecommendationScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl, ...shadows.md },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  backBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF', textAlign: 'center', flex: 1 },
-  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: spacing.xs + 2 },
-  content: { padding: spacing.md },
-  optionGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  optionChip: { paddingHorizontal: spacing.sm + 4, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: '#F5F8EE', borderWidth: 1, borderColor: '#DCE8C8' },
-  optionChipActive: { backgroundColor: colors.primaryDark, borderColor: colors.primaryDark },
-  optionText: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
-  optionTextActive: { color: '#FFFFFF' },
-  recommendBtn: { backgroundColor: colors.primaryDark, paddingVertical: spacing.md, borderRadius: radius.pill, alignItems: 'center', marginBottom: spacing.lg, ...shadows.md },
-  recommendBtnText: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
-  resultTitle: { fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: spacing.md },
-  cropCard: {},
-  cropHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm },
-  cropRank: { fontSize: 20, fontWeight: '900', color: colors.primaryDark, width: 32 },
-  cropName: { fontSize: 20, fontWeight: '800', color: colors.text, flex: 1 },
-  cropDetails: { gap: spacing.sm },
-  cropDetailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cropLabel: { fontSize: 14, color: colors.textSecondary },
-  cropValue: { fontSize: 14, fontWeight: '700', color: colors.text },
+  container: { flex: 1, backgroundColor: '#F0FAF0' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
+  backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.secondary, justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },
+  scroll: { padding: spacing.md },
+  card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.md, ...shadows.md },
+  sectionLabel: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm },
+  farmChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, marginRight: spacing.sm },
+  farmChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  farmChipText: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
+  farmChipTextActive: { color: '#FFF' },
+  cardTitle: { fontSize: 17, fontWeight: '700', color: colors.text, marginBottom: spacing.md },
+  label: { fontSize: 13, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm, marginTop: spacing.md },
+  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },
+  chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2, borderRadius: radius.pill, backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border },
+  chipActive: { backgroundColor: '#2D6A4F', borderColor: '#2D6A4F' },
+  chipText: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
+  chipTextActive: { color: '#FFFFFF' },
+  landInput: { backgroundColor: colors.secondary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 4, fontSize: 15, color: colors.text, marginTop: spacing.sm },
+  error: { color: colors.error, fontSize: 13, fontWeight: '500', marginTop: spacing.sm },
+  recommendBtn: { flexDirection: 'row', backgroundColor: '#2D6A4F', borderRadius: radius.pill, paddingVertical: spacing.md, justifyContent: 'center', alignItems: 'center', marginTop: spacing.lg },
+  recommendBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  resultsSection: { marginBottom: spacing.md },
+  resultsTitle: { fontSize: 17, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
+  cropCard: { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.md, marginBottom: spacing.sm, ...shadows.sm, overflow: 'hidden' },
+  rankBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.primaryLight, justifyContent: 'center', alignItems: 'center', marginRight: spacing.md, marginTop: 2 },
+  rankText: { fontSize: 14, fontWeight: '800', color: colors.primary },
+  cropInfo: { flex: 1 },
+  cropName: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: spacing.xs },
+  cropDetails: { gap: spacing.xs },
+  cropDetail: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  cropDetailText: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
+  historySection: { marginTop: spacing.md },
+  historyTitle: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
+  historyItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, backgroundColor: colors.surface, borderRadius: radius.md, marginBottom: spacing.xs },
+  historyDate: { fontSize: 12, color: colors.textLight, fontWeight: '500' },
+  historyText: { fontSize: 13, color: colors.textSecondary, fontWeight: '600', flex: 1 },
 });

@@ -1,3 +1,6 @@
+export const MARKET_SOURCE = 'AGMARKNET (data.gov.in)';
+export const MARKET_LAST_UPDATED = new Date().toLocaleString('en-IN', { weekday: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
+
 export interface MarketPrice {
   crop: string;
   price: string;
@@ -27,6 +30,12 @@ export interface MarketInfo {
 export interface PriceTrend {
   month: string;
   price: number;
+}
+
+export interface CropTrends {
+  daily: { label: string; price: number }[];
+  weekly: { label: string; price: number }[];
+  monthly: { label: string; price: number }[];
 }
 
 export interface MarketFilters {
@@ -181,6 +190,29 @@ export function getPriceTrend(commodity: string): PriceTrend[] {
   }
   const basePrice = ALL_CROPS_DATA.find(c => c.crop.toLowerCase() === commodity.toLowerCase())?.priceNum || 2000;
   return generateTrend(basePrice);
+}
+
+export function getCropTrends(commodity: string): CropTrends {
+  const base = ALL_CROPS_DATA.find(c => c.crop.toLowerCase() === commodity.toLowerCase())?.priceNum || 2000;
+  const rnd = (p: number) => Math.round(p);
+
+  const daily = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i));
+    const variation = (Math.random() - 0.45) * base * 0.03;
+    return { label: d.toLocaleDateString('en', { weekday: 'short' }), price: rnd(base + variation) };
+  });
+
+  const weekly = Array.from({ length: 8 }, (_, i) => {
+    const variation = (Math.random() - 0.45) * base * 0.06;
+    return { label: `W${i + 1}`, price: rnd(base + variation) };
+  });
+
+  const monthly = CHART_MONTHS.map((m) => {
+    const variation = (Math.random() - 0.45) * base * 0.12;
+    return { label: m, price: rnd(base + variation) };
+  });
+
+  return { daily, weekly, monthly };
 }
 
 export function getBestSellingRecommendation(prices: MarketPrice[]): { crop: string; price: string; market: string } | null {

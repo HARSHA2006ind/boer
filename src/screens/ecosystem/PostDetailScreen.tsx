@@ -1,21 +1,88 @@
-import { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, shadows } from '../../theme';
-
-const COMMENTS = [
-  { id: '1', farmer: 'Suresh Reddy', text: 'Apply neem oil 5% solution. It works great for this!', time: '1h ago', likes: 8 },
-  { id: '2', farmer: 'Mohan Rao', text: 'I had the same issue last month. Used copper fungicide and it cleared up in a week.', time: '3h ago', likes: 5 },
-  { id: '3', farmer: 'Kavita Sharma', text: 'Remove affected leaves first. Then spray Bordeaux mixture 1%.', time: '5h ago', likes: 12 },
-];
+import { supabase } from '../../services/supabase';
+import { CommunityPost } from '../../types';
 
 interface Props { navigation: any; route: any }
 
+interface Comment { id: string; farmer: string; text: string; time: string; likes: number; }
+
 export default function PostDetailScreen({ navigation, route }: Props) {
+  const { postId } = route.params;
   const insets = useSafeAreaInsets();
   const [comment, setComment] = useState('');
   const [liked, setLiked] = useState(false);
+  const [post, setPost] = useState<CommunityPost | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadPost();
+  }, []);
+
+  const loadPost = async () => {
+    try {
+      const { data, error } = await supabase.from('community_posts').select('*').eq('id', postId).single();
+      if (!error && data) {
+        setPost({
+          id: data.id, user_id: data.user_id || '', content: data.content || '', image_urls: data.image_urls || [],
+          post_type: data.post_type || 'text', farmer_name: data.farmer_name || '', village: data.village || '',
+          district: data.district || '', likes_count: data.likes_count || 0, comments_count: data.comments_count || 0,
+          created_at: data.created_at || new Date().toISOString(),
+        });
+      }
+    } catch {}
+    try {
+      const { data } = await supabase.from('community_comments').select('*, farmer_name').eq('post_id', postId).order('created_at', { ascending: false }).limit(20);
+      if (data) {
+        setComments(data.map((c: any) => ({
+          id: c.id, farmer: c.farmer_name || 'Farmer', text: c.content || '',
+          time: getTimeAgo(c.created_at), likes: c.likes_count || 0,
+        })));
+      }
+    } catch {
+      setComments([
+        { id: '1', farmer: 'Suresh Reddy', text: 'Apply neem oil 5% solution. It works great for this!', time: '1h ago', likes: 8 },
+        { id: '2', farmer: 'Mohan Rao', text: 'I had the same issue last month. Used copper fungicide and it cleared up in a week.', time: '3h ago', likes: 5 },
+        { id: '3', farmer: 'Kavita Sharma', text: 'Remove affected leaves first. Then spray Bordeaux mixture 1%.', time: '5h ago', likes: 12 },
+      ]);
+    }
+    setLoading(false);
+  };
+
+  const getTimeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const handleAddComment = async () => {
+    if (!comment.trim()) return;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from('community_comments').insert({
+        post_id: postId, user_id: user?.id || '', content: comment.trim(),
+        farmer_name: user?.user_metadata?.full_name || user?.email || 'Farmer',
+        created_at: new Date().toISOString(),
+      });
+      setComments([{ id: Date.now().toString(), farmer: user?.user_metadata?.full_name || 'You', text: comment.trim(), time: 'now', likes: 0 }, ...comments]);
+      setComment('');
+    } catch {}
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -28,34 +95,33 @@ export default function PostDetailScreen({ navigation, route }: Props) {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={styles.postCard}>
-          <View style={styles.postHeader}>
-            <Ionicons name="person-circle" size={40} color={colors.primary} />
-            <View style={styles.postMeta}>
-              <Text style={styles.farmerName}>Lakshmi Devi</Text>
-              <Text style={styles.farmerLoc}>Guntur, Guntur · 4h ago</Text>
+        {post && (
+          <View style={styles.postCard}>
+            <View style={styles.postHeader}>
+              <Ionicons name="person-circle" size={40} color={colors.primary} />
+              <View style={styles.postMeta}>
+                <Text style={styles.farmerName}>{post.farmer_name || 'Farmer'}</Text>
+                <Text style={styles.farmerLoc}>{post.village ? `${post.village}, ${post.district}` : post.district} · {getTimeAgo(post.created_at)}</Text>
+              </View>
+            </View>
+            <Text style={styles.postContent}>{post.content}</Text>
+
+            <View style={styles.postStats}>
+              <TouchableOpacity style={styles.statBtn} onPress={() => setLiked(!liked)}>
+                <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? colors.danger : colors.textSecondary} />
+                <Text style={styles.statText}>{post.likes_count + (liked ? 1 : 0)}</Text>
+              </TouchableOpacity>
+              <View style={styles.statBtn}>
+                <Ionicons name="chatbubble-outline" size={16} color={colors.textSecondary} />
+                <Text style={styles.statText}>{post.comments_count}</Text>
+              </View>
             </View>
           </View>
-          <Text style={styles.postContent}>My tomato plants have yellow spots on leaves. What should I apply? 📸</Text>
+        )}
 
-          <View style={styles.postStats}>
-            <TouchableOpacity style={styles.statBtn} onPress={() => setLiked(!liked)}>
-              <Ionicons name={liked ? 'heart' : 'heart-outline'} size={18} color={liked ? colors.danger : colors.textSecondary} />
-              <Text style={styles.statText}>{liked ? 16 : 15}</Text>
-            </TouchableOpacity>
-            <View style={styles.statBtn}>
-              <Ionicons name="chatbubble-outline" size={16} color={colors.textSecondary} />
-              <Text style={styles.statText}>12</Text>
-            </View>
-            <TouchableOpacity style={styles.statBtn}>
-              <Ionicons name="share-outline" size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <Text style={styles.commentHeader}>Answers ({comments.length})</Text>
 
-        <Text style={styles.commentHeader}>Answers ({COMMENTS.length})</Text>
-
-        {COMMENTS.map(c => (
+        {comments.map(c => (
           <View key={c.id} style={styles.commentCard}>
             <View style={styles.commentHeaderRow}>
               <Ionicons name="person-circle" size={28} color={colors.textLight} />
@@ -82,7 +148,7 @@ export default function PostDetailScreen({ navigation, route }: Props) {
       <View style={[styles.inputBar, { paddingBottom: insets.bottom + spacing.sm }]}>
         <TextInput style={styles.input} value={comment} onChangeText={setComment} placeholder="Write an answer..."
           placeholderTextColor={colors.textLight} />
-        <TouchableOpacity style={[styles.sendBtn, !comment.trim() && styles.sendDisabled]} disabled={!comment.trim()}>
+        <TouchableOpacity style={[styles.sendBtn, !comment.trim() && styles.sendDisabled]} disabled={!comment.trim()} onPress={handleAddComment}>
           <Ionicons name="send" size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>

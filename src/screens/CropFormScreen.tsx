@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
 import { getCrop, createCrop, updateCrop } from '../services/cropService';
 import { colors, radius, spacing } from '../theme';
@@ -13,6 +14,7 @@ interface Props { navigation: any; route: any }
 
 export default function CropFormScreen({ navigation, route }: Props) {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const { farmId, cropId } = route.params || {};
   const [cropName, setCropName] = useState('');
@@ -46,7 +48,7 @@ export default function CropFormScreen({ navigation, route }: Props) {
   if (fetching) return <Loading fullScreen />;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + spacing.xxl }]} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{cropId ? t('crop.edit') : t('crop.add')}</Text>
       <SearchableSelect label={`${t('crop.name')} *`} options={CROPS} value={cropName} onSelect={setCropName} icon="🌾" searchPlaceholder={t('common.search')} />
       <InputField label={t('crop.sowingDate')} value={sowingDate} onChangeText={setSowingDate} placeholder="YYYY-MM-DD" />

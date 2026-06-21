@@ -1,16 +1,10 @@
-import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, shadows } from '../../theme';
-
-const ALERTS = [
-  { id: '1', type: 'pest', title: 'Fall Armyworm Reported', area: 'Coimbatore, Tamil Nadu', severity: 'high', action: 'Inspect maize crops immediately. Apply recommended pesticides.', time: '2h ago', reporter: 'Kumaraswamy' },
-  { id: '2', type: 'disease', title: 'Tomato Disease Outbreak', area: 'Kolar, Karnataka', severity: 'critical', action: 'Remove infected plants. Apply copper fungicide. Avoid overhead irrigation.', time: '4h ago', reporter: 'Venkatesh' },
-  { id: '3', type: 'weather', title: 'Heavy Rainfall Warning', area: 'Sangareddy, Telangana', severity: 'high', action: 'Delay irrigation. Check drainage systems. Secure standing crops.', time: '6h ago', reporter: 'Boer Weather' },
-  { id: '4', type: 'pest', title: 'Pest Spread Risk Increased', area: 'Guntur, Andhra Pradesh', severity: 'medium', action: 'Monitor crops daily. Set up pheromone traps. Apply preventive spray.', time: '12h ago', reporter: 'Agriculture Dept' },
-  { id: '5', type: 'disease', title: 'Powdery Mildew in Grapes', area: 'Nashik, Maharashtra', severity: 'high', action: 'Apply sulfur spray. Improve air circulation by pruning.', time: '1d ago', reporter: 'Rahul Sharma' },
-  { id: '6', type: 'weather', title: 'Heat Wave Expected', area: 'Nagpur, Maharashtra', severity: 'medium', action: 'Increase irrigation frequency. Provide shade for young plants.', time: '1d ago', reporter: 'Boer Weather' },
-];
+import { fetchAlerts } from '../../services/alertService';
+import { RegionalAlert } from '../../types';
 
 const SEVERITY_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
   critical: { color: '#991B1B', bg: '#FEE2E2', label: 'Critical' },
@@ -22,14 +16,37 @@ const SEVERITY_CONFIG: Record<string, { color: string; bg: string; label: string
 const TYPE_ICONS: Record<string, string> = { pest: 'bug', disease: 'medkit', weather: 'rainy', price: 'trending-up' };
 
 export default function RegionalAlertsScreen() {
+  const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState('all');
+  const [alerts, setAlerts] = useState<RegionalAlert[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = filter === 'all' ? ALERTS : ALERTS.filter(a => a.type === filter);
+  useEffect(() => {
+    loadAlerts();
+  }, []);
+
+  const loadAlerts = async () => {
+    setLoading(true);
+    const data = await fetchAlerts();
+    setAlerts(data);
+    setLoading(false);
+  };
+
+  const filtered = filter === 'all' ? alerts : alerts.filter(a => a.type === filter);
+
+  const getTimeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.filterRow}>
-        {['all', 'pest', 'disease', 'weather'].map(f => {
+        {['all', 'pest', 'disease', 'weather', 'price'].map(f => {
           const active = filter === f;
           return (
             <TouchableOpacity key={f} style={[styles.filterChip, active && styles.filterActive]} onPress={() => setFilter(f)}>
@@ -39,37 +56,48 @@ export default function RegionalAlertsScreen() {
         })}
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
-        {filtered.map(alert => {
-          const sev = SEVERITY_CONFIG[alert.severity];
-          return (
-            <View key={alert.id} style={[styles.alertCard, { borderLeftColor: sev.color, borderLeftWidth: 4 }]}>
-              <View style={styles.alertHeader}>
-                <View style={styles.alertTypeRow}>
-                  <View style={[styles.alertIconBg, { backgroundColor: sev.bg }]}>
-                    <Ionicons name={TYPE_ICONS[alert.type] as any} size={18} color={sev.color} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + spacing.xxl }]}>
+        {loading ? (
+          <View style={styles.loadingContainer}><ActivityIndicator size="large" color={colors.primary} /></View>
+        ) : filtered.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="checkmark-circle" size={40} color={colors.success} />
+            <Text style={styles.emptyText}>No alerts in this category</Text>
+          </View>
+        ) : (
+          filtered.map(alert => {
+            const sev = SEVERITY_CONFIG[alert.severity] || SEVERITY_CONFIG.medium;
+            const icon = TYPE_ICONS[alert.type] || 'warning';
+            return (
+              <View key={alert.id} style={styles.alertCard}>
+                <View style={styles.alertHeader}>
+                  <View style={[styles.severityDot, { backgroundColor: sev.color }]} />
+                  <View style={[styles.iconCircle, { backgroundColor: sev.bg }]}>
+                    <Ionicons name={icon as any} size={16} color={sev.color} />
                   </View>
                   <View style={styles.alertInfo}>
                     <Text style={styles.alertTitle}>{alert.title}</Text>
-                    <Text style={styles.alertArea}>{alert.area}</Text>
+                    <Text style={styles.alertArea}>{alert.affected_area}</Text>
+                  </View>
+                  <View style={[styles.severityBadge, { backgroundColor: sev.bg }]}>
+                    <Text style={[styles.severityLabel, { color: sev.color }]}>{sev.label}</Text>
                   </View>
                 </View>
-                <View style={[styles.sevBadge, { backgroundColor: sev.bg }]}>
-                  <Text style={[styles.sevText, { color: sev.color }]}>{sev.label}</Text>
+                <Text style={styles.alertDesc}>{alert.description}</Text>
+                <View style={styles.alertFooter}>
+                  <View style={styles.actionRow}>
+                    <Ionicons name="bulb-outline" size={13} color={colors.primary} />
+                    <Text style={styles.actionText}>{alert.recommended_action}</Text>
+                  </View>
+                  <View style={styles.reporterRow}>
+                    <Ionicons name="person-outline" size={11} color={colors.textLight} />
+                    <Text style={styles.reporterText}>{alert.farmer_name} · {getTimeAgo(alert.created_at)}</Text>
+                  </View>
                 </View>
               </View>
-
-              <View style={styles.alertBody}>
-                <Text style={styles.alertAction}>⚠️ {alert.action}</Text>
-              </View>
-
-              <View style={styles.alertFooter}>
-                <Text style={styles.alertReporter}>Reported by {alert.reporter}</Text>
-                <Text style={styles.alertTime}>{alert.time}</Text>
-              </View>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
       </ScrollView>
     </View>
   );
@@ -77,24 +105,28 @@ export default function RegionalAlertsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  filterRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  loadingContainer: { paddingVertical: spacing.xxl * 2, justifyContent: 'center', alignItems: 'center' },
+  emptyContainer: { paddingVertical: spacing.xxl * 2, justifyContent: 'center', alignItems: 'center', gap: spacing.sm },
+  emptyText: { fontSize: 14, color: colors.textLight, fontWeight: '500' },
+  filterRow: { flexDirection: 'row', paddingHorizontal: spacing.md, gap: spacing.sm, marginBottom: spacing.md },
   filterChip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   filterActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterLabel: { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   filterLabelActive: { color: '#FFFFFF' },
-  list: { padding: spacing.md, paddingBottom: spacing.xxl },
+  list: { padding: spacing.md },
   alertCard: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.md, marginBottom: spacing.md, ...shadows.sm },
-  alertHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  alertTypeRow: { flexDirection: 'row', flex: 1, gap: spacing.md },
-  alertIconBg: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  alertHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
+  severityDot: { width: 8, height: 8, borderRadius: 4, marginRight: spacing.sm },
+  iconCircle: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: spacing.sm },
   alertInfo: { flex: 1 },
-  alertTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  alertTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
   alertArea: { fontSize: 11, color: colors.textLight, marginTop: 1 },
-  sevBadge: { borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
-  sevText: { fontSize: 10, fontWeight: '800' },
-  alertBody: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border },
-  alertAction: { fontSize: 13, lineHeight: 18, color: colors.text, fontWeight: '500' },
-  alertFooter: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm },
-  alertReporter: { fontSize: 10, color: colors.textLight, fontWeight: '600' },
-  alertTime: { fontSize: 10, color: colors.textLight, fontWeight: '600' },
+  severityBadge: { borderRadius: radius.pill, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  severityLabel: { fontSize: 10, fontWeight: '700' },
+  alertDesc: { fontSize: 13, color: colors.textSecondary, lineHeight: 18, marginBottom: spacing.sm },
+  alertFooter: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm, gap: spacing.xs },
+  actionRow: { flexDirection: 'row', gap: spacing.xs, alignItems: 'flex-start' },
+  actionText: { fontSize: 12, color: colors.text, fontWeight: '500', flex: 1, lineHeight: 17 },
+  reporterRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  reporterText: { fontSize: 10, color: colors.textLight, fontWeight: '500' },
 });
