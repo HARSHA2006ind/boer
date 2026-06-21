@@ -7,12 +7,15 @@ import { colors, spacing, radius, shadows } from '../theme';
 import { useAuth } from '../contexts/AuthContext';
 import { getAIProvider, DiseaseResult } from '../ai/aiProvider';
 import { saveDiseaseScan, getDiseaseScans } from '../services/aiStorage';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props { navigation: any }
 
 export default function DiseaseScannerScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { language } = useLanguage();
+  useEffect(() => { getAIProvider().setLanguage(language); }, [language]);
   const [image, setImage] = useState<string | null>(null);
   const [base64, setBase64] = useState('');
   const [mimeType, setMimeType] = useState('image/jpeg');
@@ -223,7 +226,7 @@ export default function DiseaseScannerScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F7F2' },
+  container: { flex: 1, backgroundColor: '#F5F3EF' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.secondary, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },

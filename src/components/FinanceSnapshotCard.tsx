@@ -55,7 +55,7 @@ function FinanceSnapshotCard({ revenue, expenses, profit, month, onViewDetails }
       )}
       <TouchableOpacity onPress={onViewDetails} style={styles.viewBtn} activeOpacity={0.7}>
         <Text style={styles.viewBtnText}>{t('home.finance.viewDetails')}</Text>
-        <Ionicons name="chevron-forward" size={14} color="#1E6F50" />
+        <Ionicons name="chevron-forward" size={14} color="#6B705C" />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   viewBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1E6F50',
+    color: '#6B705C',
   },
 });
 

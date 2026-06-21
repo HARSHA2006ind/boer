@@ -8,6 +8,7 @@ import { supabase } from '../services/supabase';
 import { getAIProvider, SmartAlert, WeatherInterpretationInput, FarmAlertContext } from '../ai/aiProvider';
 import { useWeather } from '../hooks/useWeather';
 import { saveSmartAlerts, getSmartAlerts } from '../services/aiStorage';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props { navigation: any }
 
@@ -27,6 +28,8 @@ export default function SmartAlertsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { weather } = useWeather();
+  const { language } = useLanguage();
+  useEffect(() => { getAIProvider().setLanguage(language); }, [language]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);

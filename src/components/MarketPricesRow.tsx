@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   },
   cropCard: {
     width: 110,
-    backgroundColor: '#F8F7F2',
+    backgroundColor: '#F5F3EF',
     borderRadius: radius.md,
     padding: spacing.sm,
     alignItems: 'center',

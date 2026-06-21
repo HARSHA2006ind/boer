@@ -14,6 +14,7 @@ export interface AIProvider {
   getGovernmentSchemeInfo(query: string): Promise<string>;
   generateSmartAlerts(farms: FarmAlertContext[], weather: WeatherInterpretationInput): Promise<SmartAlert[]>;
   getMarketAdvice(input: MarketAdviceInput): Promise<MarketAdviceResult>;
+  setLanguage(lang: string): void;
 }
 
 export interface FarmAlertContext {

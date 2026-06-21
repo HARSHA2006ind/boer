@@ -128,7 +128,7 @@ export default function AppNavigator() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F8F7F2' },
+  root: { flex: 1, backgroundColor: '#F5F3EF' },
   banner: {
     position: 'absolute',
     top: 0,

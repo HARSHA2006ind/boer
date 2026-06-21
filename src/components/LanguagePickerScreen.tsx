@@ -42,7 +42,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.3, marginBottom: 4 },
   subtitle: { fontSize: 14, color: '#6B7280', fontWeight: '500', marginBottom: 24 },
   list: { width: '100%', gap: 8 },
-  langOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, backgroundColor: '#F8F7F2', borderRadius: 12 },
+  langOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, backgroundColor: '#F5F3EF', borderRadius: 12 },
   langNative: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
   langName: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
   skipBtn: { marginTop: 20, paddingVertical: 8 },

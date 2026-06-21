@@ -7,12 +7,15 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import { getAIProvider, MarketAdviceInput, MarketAdviceResult } from '../ai/aiProvider';
 import { saveMarketAdvice, getMarketAdviceHistory } from '../services/aiStorage';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props { navigation: any }
 
 export default function MarketAdvisorScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { language } = useLanguage();
+  useEffect(() => { getAIProvider().setLanguage(language); }, [language]);
   const [crop, setCrop] = useState('');
   const [location, setLocation] = useState('');
   const [state, setState] = useState('');

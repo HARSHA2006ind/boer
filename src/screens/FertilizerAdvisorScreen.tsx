@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import { getAIProvider, FertilizerInput } from '../ai/aiProvider';
 import { saveRecommendation, getRecentRecommendations } from '../services/aiStorage';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props { navigation: any }
 
@@ -16,6 +17,8 @@ const GROWTH_STAGES = ['Sowing', 'Seedling', 'Vegetative', 'Flowering', 'Fruitin
 export default function FertilizerAdvisorScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { language } = useLanguage();
+  useEffect(() => { getAIProvider().setLanguage(language); }, [language]);
   const [crop, setCrop] = useState('');
   const [soilType, setSoilType] = useState('');
   const [growthStage, setGrowthStage] = useState('');

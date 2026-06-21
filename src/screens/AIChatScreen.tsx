@@ -39,10 +39,12 @@ function TypewriterText({ text }: { text: string }) {
 function generateSessionId() { return `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`; }
 
 export default function AIChatScreen({ navigation }: Props) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const flatRef = useRef<FlatList>(null);
+
+  useEffect(() => { getAIProvider().setLanguage(language); }, [language]);
   const [messages, setMessages] = useState<Message[]>([
     { role: 'ai', text: "Hello! I'm Boer AI. Ask me anything about your farm — irrigation, pests, weather, or market prices.", timestamp: Date.now() },
   ]);

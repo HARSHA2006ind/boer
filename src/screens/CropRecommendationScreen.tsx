@@ -8,6 +8,7 @@ import { supabase } from '../services/supabase';
 import { getAIProvider, CropRecommendationInput } from '../ai/aiProvider';
 import { saveRecommendation, getRecentRecommendations } from '../services/aiStorage';
 import { useWeather } from '../hooks/useWeather';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props { navigation: any }
 
@@ -18,6 +19,8 @@ const SEASONS = ['Kharif', 'Rabi', 'Zaid', 'Summer', 'Winter', 'Round the Year']
 export default function CropRecommendationScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { language } = useLanguage();
+  useEffect(() => { getAIProvider().setLanguage(language); }, [language]);
   const [soilType, setSoilType] = useState('');
   const [waterSource, setWaterSource] = useState('');
   const [season, setSeason] = useState('');

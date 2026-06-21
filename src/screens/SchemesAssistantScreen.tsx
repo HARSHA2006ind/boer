@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabase';
 import { getAIProvider } from '../ai/aiProvider';
 import { saveRecommendation, getRecentRecommendations } from '../services/aiStorage';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface Props { navigation: any }
 
@@ -32,6 +33,8 @@ const QUICK_QUERIES = [
 export default function SchemesAssistantScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { language } = useLanguage();
+  useEffect(() => { getAIProvider().setLanguage(language); }, [language]);
   const [query, setQuery] = useState('');
   const [state, setState] = useState('');
   const [category, setCategory] = useState('');

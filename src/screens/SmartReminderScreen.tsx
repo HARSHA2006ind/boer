@@ -141,7 +141,7 @@ export default function SmartReminderScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F7F2' },
+  container: { flex: 1, backgroundColor: '#F5F3EF' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
