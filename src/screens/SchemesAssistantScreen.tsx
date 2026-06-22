@@ -93,7 +93,7 @@ export default function SchemesAssistantScreen({ navigation }: Props) {
         refreshControl={<RefreshControl refreshing={false} onRefresh={loadHistory} />}>
         <View style={styles.card}>
           <View style={styles.iconHeader}>
-            <Ionicons name="shield-checkmark" size={28} color="#D4872F" />
+            <Ionicons name="shield-checkmark" size={28} color="#F59E0B" />
             <View>
               <Text style={styles.cardTitle}>Government Schemes</Text>
               <Text style={styles.cardSub}>Find schemes, subsidies & benefits</Text>
@@ -145,7 +145,7 @@ export default function SchemesAssistantScreen({ navigation }: Props) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.quickRow}>
           {QUICK_QUERIES.map((q, i) => (
             <TouchableOpacity key={i} style={styles.quickChip} onPress={() => { setQuery(q); setShowFilters(false); }}>
-              <Ionicons name="flash-outline" size={14} color="#D4872F" />
+              <Ionicons name="flash-outline" size={14} color="#F59E0B" />
               <Text style={styles.quickText}>{q}</Text>
             </TouchableOpacity>
           ))}
@@ -196,16 +196,16 @@ const styles = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.xs, marginTop: spacing.sm },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.sm },
   chip: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.pill, backgroundColor: colors.secondary, borderWidth: 1, borderColor: colors.border, marginRight: spacing.xs },
-  chipActive: { backgroundColor: '#D4872F', borderColor: '#D4872F' },
+  chipActive: { backgroundColor: '#F59E0B', borderColor: '#F59E0B' },
   chipText: { fontSize: 13, color: colors.textSecondary, fontWeight: '600' },
   chipTextActive: { color: '#FFFFFF' },
   landInput: { backgroundColor: colors.secondary, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2, fontSize: 15, color: colors.text, marginTop: spacing.sm },
-  searchBtn: { flexDirection: 'row', backgroundColor: '#D4872F', borderRadius: radius.pill, paddingVertical: spacing.md, justifyContent: 'center', alignItems: 'center', marginTop: spacing.md },
+  searchBtn: { flexDirection: 'row', backgroundColor: '#F59E0B', borderRadius: radius.pill, paddingVertical: spacing.md, justifyContent: 'center', alignItems: 'center', marginTop: spacing.md },
   searchBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   quickLabel: { fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
   quickRow: { marginBottom: spacing.md },
   quickChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.surface, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2, borderRadius: radius.pill, borderWidth: 1, borderColor: '#E8D5B5', marginRight: spacing.sm },
-  quickText: { fontSize: 12, color: '#6B7280', fontWeight: '600', maxWidth: 180 },
+  quickText: { fontSize: 12, color: '#64748B', fontWeight: '600', maxWidth: 180 },
   error: { color: colors.error, fontSize: 13, fontWeight: '500', marginBottom: spacing.sm },
   resultCard: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, marginBottom: spacing.md, ...shadows.md },
   resultHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },

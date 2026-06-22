@@ -50,12 +50,12 @@ const styles = StyleSheet.create({
   },
   backIcon: {
     fontSize: 24,
-    color: '#2E7D32',
+    color: '#14B8A6',
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#6B705C',
+    color: '#14B8A6',
   },
   subtitle: {
     fontSize: 12,

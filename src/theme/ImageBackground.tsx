@@ -9,8 +9,8 @@ interface Props {
 }
 
 const GRADIENTS: Record<string, [string, string, string]> = {
-  farm: ['#4A6B12', '#6B8E23', '#8FB848'],
-  splash: ['#1B3A1B', '#2E7D32', '#6B8E23'],
+  farm: ['#0D9488', '#14B8A6', '#5EEAD4'],
+  splash: ['#0D9488', '#14B8A6', '#2DD4BF'],
   weather: ['#3B82F6', '#60A5FA', '#93C5FD'],
   ai: ['#1E1B4B', '#312E81', '#4338CA'],
 };

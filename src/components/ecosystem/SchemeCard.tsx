@@ -20,7 +20,7 @@ export default function SchemeCard({ name, description, benefits, onPress }: Pro
           <Text style={styles.name}>{name}</Text>
           <Text style={styles.desc}>{description}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+        <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
       </View>
       <View style={styles.footer}>
         <View style={styles.tag}><Text style={styles.tagText}>{benefits.substring(0, 30)}...</Text></View>

@@ -24,7 +24,7 @@ function SmartRecommendations({ recommendations = [], onPress }: Props) {
     <Animated.View entering={FadeInUp.duration(500).delay(150)} style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="bulb-outline" size={16} color="#6B705C" />
+          <Ionicons name="bulb-outline" size={16} color="#14B8A6" />
           <Text style={styles.title}>Smart Recommendations</Text>
         </View>
       </View>
@@ -49,7 +49,7 @@ function SmartRecommendations({ recommendations = [], onPress }: Props) {
           </Animated.View>
         )) : (
           <View style={styles.emptyState}>
-            <Ionicons name="bulb-outline" size={28} color="#D1D5DB" />
+            <Ionicons name="bulb-outline" size={28} color="#CBD5E1" />
             <Text style={styles.emptyText}>No data available</Text>
           </View>
         )}
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  title: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
+  title: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   card: {
     width: '48%',
@@ -91,12 +91,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  cardTitle: { fontSize: 13, fontWeight: '700', color: '#1A1A1A' },
-  cardSub: { fontSize: 10, color: '#6B7280', lineHeight: 14 },
+  cardTitle: { fontSize: 13, fontWeight: '700', color: '#0F172A' },
+  cardSub: { fontSize: 10, color: '#64748B', lineHeight: 14 },
   cardAction: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
   cardActionText: { fontSize: 10, fontWeight: '700' },
   emptyState: { width: '100%', alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.sm },
-  emptyText: { fontSize: 13, color: '#D1D5DB', fontWeight: '600' },
+  emptyText: { fontSize: 13, color: '#CBD5E1', fontWeight: '600' },
 });
 
 export default memo(SmartRecommendations);

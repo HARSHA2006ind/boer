@@ -24,7 +24,7 @@ const SECTIONS = [
     items: [
       { icon: 'help-circle-outline', label: 'Help & FAQ', color: colors.primary, screen: undefined },
       { icon: 'chatbubble-outline', label: 'Contact Us', color: '#3B82F6', screen: undefined },
-      { icon: 'document-text-outline', label: 'Privacy Policy', color: '#6B7280', screen: undefined },
+      { icon: 'document-text-outline', label: 'Privacy Policy', color: '#64748B', screen: undefined },
     ],
   },
 ];
@@ -65,7 +65,7 @@ export default function MoreScreen({ navigation }: Props) {
                     <Ionicons name={item.icon as any} size={20} color={item.color} />
                   </View>
                   <Text style={styles.rowLabel}>{item.label}</Text>
-                  <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+                  <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
                 </TouchableOpacity>
               ))}
             </View>

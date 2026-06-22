@@ -35,7 +35,7 @@ export default function WeatherWidget({
     if (c.includes('sun') || c.includes('clear')) return ['#F59E0B', '#FDE68A'] as const;
     if (c.includes('rain') || c.includes('drizzle') || c.includes('shower')) return ['#3B82F6', '#93C5FD'] as const;
     if (c.includes('thunder') || c.includes('storm')) return ['#1E3A5F', '#64748B'] as const;
-    if (c.includes('cloud') || c.includes('overcast')) return ['#6B7280', '#9CA3AF'] as const;
+    if (c.includes('cloud') || c.includes('overcast')) return ['#64748B', '#94A3B8'] as const;
     if (c.includes('wind')) return ['#60A5FA', '#BFDBFE'] as const;
     if (c.includes('night')) return ['#1E293B', '#475569'] as const;
     return ['#F59E0B', '#FDE68A'] as const;

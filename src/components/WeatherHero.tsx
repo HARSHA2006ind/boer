@@ -56,7 +56,7 @@ function WeatherHero({ temperature, condition, location, farmName, humidity, win
   }, [condition]);
 
   const gradients: Record<string, readonly [string, string]> = {
-    sunny: ['#A5A58D', '#6B705C'] as const,
+    sunny: ['#64748B', '#14B8A6'] as const,
     cloudy: ['#8B8B7A', '#6B6B5C'] as const,
     overcast: ['#7A7A6A', '#5A5A4C'] as const,
     rainy: ['#5A7A8A', '#3A5A6A'] as const,
@@ -167,12 +167,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-            backgroundColor: 'rgba(203,153,126,0.12)',
+            backgroundColor: 'rgba(20,184,166,0.12)',
     borderRadius: radius.pill,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
   },
-  adviceText: { fontSize: 12, fontWeight: '600', color: '#CB997E', flex: 1 },
+  adviceText: { fontSize: 12, fontWeight: '600', color: '#14B8A6', flex: 1 },
   forecastRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

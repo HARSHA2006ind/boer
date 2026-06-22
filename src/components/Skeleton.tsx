@@ -17,7 +17,7 @@ export function Skeleton({ width = '100%', height = 20, borderRadius = 8, style 
     return () => anim.stop();
   }, []);
 
-  return <Animated.View style={[{ width, height, borderRadius, backgroundColor: '#E5E0D5', opacity }, style]} />;
+  return <Animated.View style={[{ width, height, borderRadius, backgroundColor: '#E2E8F0', opacity }, style]} />;
 }
 
 export function CardSkeleton() {

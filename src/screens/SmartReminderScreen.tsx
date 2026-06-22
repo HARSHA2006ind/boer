@@ -23,10 +23,10 @@ interface WeatherTip {
 
 const REMINDERS: ReminderItem[] = [
   { id: '1', icon: '💧', title: 'Irrigation Recommended Today', subtitle: 'Soil moisture levels at 32%. Water required for rice field.', color: '#3B82F6', bgColor: '#EFF6FF', date: 'Today' },
-  { id: '2', icon: '🌾', title: 'Harvest Window Opens In 3 Days', subtitle: 'Paddy in North field ready for harvest from Jun 22.', color: '#2D8A4E', bgColor: '#ECFDF5', date: 'Jun 22' },
-  { id: '3', icon: '🧪', title: 'Fertilizer Application Due', subtitle: 'Apply NPK (20-10-10) to active wheat crop.', color: '#D4872F', bgColor: '#FFF8F0', date: 'Jun 20' },
-  { id: '4', icon: '🔧', title: 'Equipment Maintenance Due', subtitle: 'Tractor service overdue by 15 days.', color: '#6B7280', bgColor: '#F3F4F6', date: 'Overdue' },
-  { id: '5', icon: '🌱', title: 'Sowing Window Opens Next Week', subtitle: 'Optimal time for Kharif cropping from Jun 25.', color: '#6B705C', bgColor: '#F0FDF4', date: 'Jun 25' },
+  { id: '2', icon: '🌾', title: 'Harvest Window Opens In 3 Days', subtitle: 'Paddy in North field ready for harvest from Jun 22.', color: '#22C55E', bgColor: '#ECFDF5', date: 'Jun 22' },
+  { id: '3', icon: '🧪', title: 'Fertilizer Application Due', subtitle: 'Apply NPK (20-10-10) to active wheat crop.', color: '#F59E0B', bgColor: '#FFF8F0', date: 'Jun 20' },
+  { id: '4', icon: '🔧', title: 'Equipment Maintenance Due', subtitle: 'Tractor service overdue by 15 days.', color: '#64748B', bgColor: '#F3F4F6', date: 'Overdue' },
+  { id: '5', icon: '🌱', title: 'Sowing Window Opens Next Week', subtitle: 'Optimal time for Kharif cropping from Jun 25.', color: '#14B8A6', bgColor: '#F0FDF4', date: 'Jun 25' },
 ];
 
 const WEATHER_TIPS: WeatherTip[] = [
@@ -44,7 +44,7 @@ export default function SmartReminderScreen({ navigation }: Props) {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={22} color="#1A1A1A" />
+          <Ionicons name="chevron-back" size={22} color="#0F172A" />
         </TouchableOpacity>
         <Text style={styles.title}>Smart Reminder</Text>
         <View style={styles.backBtn} />
@@ -90,7 +90,7 @@ export default function SmartReminderScreen({ navigation }: Props) {
             <Text style={styles.calText}>Jun Sowing Season Begins</Text>
           </View>
           <View style={styles.calRow}>
-            <View style={[styles.calDot, { backgroundColor: '#D4872F' }]} />
+            <View style={[styles.calDot, { backgroundColor: '#F59E0B' }]} />
             <Text style={styles.calText}>Jul — Fertilizer Application</Text>
           </View>
           <View style={styles.calRow}>
@@ -98,7 +98,7 @@ export default function SmartReminderScreen({ navigation }: Props) {
             <Text style={styles.calText}>Aug — Pest Control Schedule</Text>
           </View>
           <View style={styles.calRow}>
-            <View style={[styles.calDot, { backgroundColor: '#2D8A4E' }]} />
+            <View style={[styles.calDot, { backgroundColor: '#22C55E' }]} />
             <Text style={styles.calText}>Sep — Harvest Period</Text>
           </View>
         </Animated.View>
@@ -109,21 +109,21 @@ export default function SmartReminderScreen({ navigation }: Props) {
           <View style={styles.soilRow}>
             <Text style={styles.soilLabel}>pH Level</Text>
             <View style={styles.soilBar}>
-              <View style={[styles.soilFill, { width: '65%', backgroundColor: '#2D8A4E' }]} />
+              <View style={[styles.soilFill, { width: '65%', backgroundColor: '#22C55E' }]} />
             </View>
             <Text style={styles.soilValue}>6.5</Text>
           </View>
           <View style={styles.soilRow}>
             <Text style={styles.soilLabel}>Nitrogen</Text>
             <View style={styles.soilBar}>
-              <View style={[styles.soilFill, { width: '45%', backgroundColor: '#D4872F' }]} />
+              <View style={[styles.soilFill, { width: '45%', backgroundColor: '#F59E0B' }]} />
             </View>
             <Text style={styles.soilValue}>Medium</Text>
           </View>
           <View style={styles.soilRow}>
             <Text style={styles.soilLabel}>Phosphorus</Text>
             <View style={styles.soilBar}>
-              <View style={[styles.soilFill, { width: '30%', backgroundColor: '#C0392B' }]} />
+              <View style={[styles.soilFill, { width: '30%', backgroundColor: '#EF4444' }]} />
             </View>
             <Text style={styles.soilValue}>Low</Text>
           </View>
@@ -141,7 +141,7 @@ export default function SmartReminderScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F3EF' },
+  container: { flex: 1, backgroundColor: '#F6F7FB' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -157,12 +157,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  title: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
   scroll: { paddingBottom: spacing.xl },
   sectionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: '#0F172A',
     paddingHorizontal: spacing.md,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
@@ -178,8 +178,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   tipIcon: { fontSize: 22 },
-  tipTitle: { fontSize: 13, fontWeight: '700', color: '#1A1A1A', flex: 1 },
-  tipDesc: { fontSize: 11, color: '#6B7280' },
+  tipTitle: { fontSize: 13, fontWeight: '700', color: '#0F172A', flex: 1 },
+  tipDesc: { fontSize: 11, color: '#64748B' },
   reminderCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -193,9 +193,9 @@ const styles = StyleSheet.create({
   reminderIcon: { fontSize: 20 },
   reminderContent: { flex: 1 },
   reminderTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  reminderTitle: { fontSize: 13, fontWeight: '600', color: '#1A1A1A', flex: 1 },
+  reminderTitle: { fontSize: 13, fontWeight: '600', color: '#0F172A', flex: 1 },
   reminderDate: { fontSize: 11, fontWeight: '700', marginLeft: spacing.xs },
-  reminderSub: { fontSize: 11, color: '#6B7280', marginTop: 1 },
+  reminderSub: { fontSize: 11, color: '#64748B', marginTop: 1 },
   calendarCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: radius.xl,
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   calRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  calDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#6B705C' },
+  calDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#14B8A6' },
   calText: { fontSize: 13, color: '#374151', fontWeight: '500' },
   soilCard: {
     backgroundColor: '#FFFFFF',
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   soilRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  soilLabel: { fontSize: 12, fontWeight: '600', color: '#6B7280', width: 70 },
+  soilLabel: { fontSize: 12, fontWeight: '600', color: '#64748B', width: 70 },
   soilBar: { flex: 1, height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden' },
   soilFill: { height: '100%', borderRadius: 4 },
   soilValue: { fontSize: 12, fontWeight: '700', color: '#374151', width: 50, textAlign: 'right' },

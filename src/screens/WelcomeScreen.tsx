@@ -19,7 +19,7 @@ export default function WelcomeScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#1B3A1B', '#2E7D32', '#4A6B12']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <LinearGradient colors={['#0D9488', '#14B8A6', '#0D9488']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
       <View style={styles.patternOverlay}>
         {['🌾','🌱','🌿','🌻','🌽','☀️'].map((e, i) => (
           <Text key={i} style={[styles.emoji, { top: 5 + i * 15, left: 10 + i * 12, opacity: 0.12, fontSize: 28 + i * 4 }]}>{e}</Text>

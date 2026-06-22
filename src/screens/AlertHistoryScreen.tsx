@@ -33,10 +33,10 @@ const MOCK_ALERTS: AlertItem[] = [
 ];
 
 const SEVERITY_META: Record<string, { icon: string; color: string; bg: string; desc: string }> = {
-  critical: { icon: 'alert-circle', color: '#D62828', bg: '#FEE2E2', desc: 'Critical' },
-  high: { icon: 'warning', color: '#D97706', bg: '#FFF7ED', desc: 'High' },
-  medium: { icon: 'alert-outline', color: '#457B9D', bg: '#EFF6FF', desc: 'Medium' },
-  low: { icon: 'information-circle-outline', color: '#6B7280', bg: '#F3F4F6', desc: 'Low' },
+  critical: { icon: 'alert-circle', color: '#EF4444', bg: '#FEE2E2', desc: 'Critical' },
+  high: { icon: 'warning', color: '#F59E0B', bg: '#FFF7ED', desc: 'High' },
+  medium: { icon: 'alert-outline', color: '#3B82F6', bg: '#EFF6FF', desc: 'Medium' },
+  low: { icon: 'information-circle-outline', color: '#64748B', bg: '#F3F4F6', desc: 'Low' },
 };
 
 const ALERT_ICONS: Record<string, string> = {
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   backBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   headerCenter: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { fontSize: 17, fontWeight: '700' },
-  unreadBadge: { backgroundColor: '#D62828', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 },
+  unreadBadge: { backgroundColor: '#EF4444', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 },
   unreadCount: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
   filterScroll: { maxHeight: 52, marginVertical: spacing.sm },
   filterContent: { paddingHorizontal: spacing.md, gap: spacing.sm, alignItems: 'center', flexDirection: 'row' },

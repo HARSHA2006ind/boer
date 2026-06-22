@@ -78,7 +78,7 @@ export default function FinancialDashboardScreen({ navigation }: Props) {
               <Ionicons name="add-circle-outline" size={20} color={colors.success} />
             </View>
             <Text style={styles.linkLabel}>Add Income</Text>
-            <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+            <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
           </TouchableOpacity>
           <View style={styles.linkDivider} />
           <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('ExpenseForm')}>
@@ -86,7 +86,7 @@ export default function FinancialDashboardScreen({ navigation }: Props) {
               <Ionicons name="remove-circle-outline" size={20} color={colors.danger} />
             </View>
             <Text style={styles.linkLabel}>Add Expense</Text>
-            <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+            <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
           </TouchableOpacity>
           <View style={styles.linkDivider} />
           <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('TransactionHistory')}>
@@ -94,7 +94,7 @@ export default function FinancialDashboardScreen({ navigation }: Props) {
               <Ionicons name="swap-horizontal-outline" size={20} color="#8B5CF6" />
             </View>
             <Text style={styles.linkLabel}>View All Transactions</Text>
-            <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+            <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
           </TouchableOpacity>
         </View>
       </ScrollView>

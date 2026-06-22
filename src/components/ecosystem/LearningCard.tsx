@@ -22,7 +22,7 @@ export default function LearningCard({ title, summary, icon, readingTime, onPres
           <Text style={styles.time}>{readingTime}</Text>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+      <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
     </TouchableOpacity>
   );
 }

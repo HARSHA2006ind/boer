@@ -25,7 +25,7 @@ function SmartReminderCard({ reminders, onViewAll, onPress }: Props) {
       <Animated.View entering={FadeInUp.duration(500).delay(300)} style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="bulb-outline" size={16} color="#6B705C" />
+          <Ionicons name="bulb-outline" size={16} color="#14B8A6" />
           <Text style={styles.title}>Smart Reminder</Text>
         </View>
       </View>
@@ -50,13 +50,13 @@ function SmartReminderCard({ reminders, onViewAll, onPress }: Props) {
         </View>
       ) : (
         <View style={styles.empty}>
-          <Ionicons name="checkmark-circle" size={22} color="#2D8A4E" />
+          <Ionicons name="checkmark-circle" size={22} color="#22C55E" />
           <Text style={styles.emptyText}>All caught up</Text>
         </View>
       )}
       <TouchableOpacity onPress={onViewAll} style={styles.viewBtn} activeOpacity={0.7}>
         <Text style={styles.viewBtnText}>View Full Schedule</Text>
-        <Ionicons name="chevron-forward" size={14} color="#6B705C" />
+        <Ionicons name="chevron-forward" size={14} color="#14B8A6" />
       </TouchableOpacity>
     </Animated.View>
   </TouchableOpacity>
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: '#0F172A',
   },
   list: {
     gap: spacing.sm,
@@ -113,11 +113,11 @@ const styles = StyleSheet.create({
   reminderTitle: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: '#0F172A',
   },
   reminderSub: {
     fontSize: 11,
-    color: '#6B7280',
+    color: '#64748B',
     marginTop: 1,
   },
   empty: {
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 13,
-    color: '#2D8A4E',
+    color: '#22C55E',
     fontWeight: '600',
   },
   viewBtn: {
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   viewBtnText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B705C',
+    color: '#14B8A6',
   },
 });
 

@@ -14,6 +14,7 @@ import AlertsSection, { HomeAlert } from '../components/AlertsSection';
 import SmartReminderCard, { Reminder } from '../components/SmartReminderCard';
 import MarketPricesRow from '../components/MarketPricesRow';
 import { spacing } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 import { duration } from '../theme/motion';
 
 const TAB_BAR_HEIGHT = 80;
@@ -35,6 +36,7 @@ interface Props { navigation: any }
 export default function HomeDashboard({ navigation }: Props) {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const { colors, isDark } = useTheme();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [marketCrops, setMarketCrops] = useState<{ name: string; icon: string; price: number; unit: string; change: number; trend: 'up' | 'down' }[]>([]);
@@ -93,34 +95,34 @@ export default function HomeDashboard({ navigation }: Props) {
     const temp = weather.temperature || 30;
     const rain = weather.rainChance || 0;
     if (isDay && temp > 30 && rain < 40) list.push({ id: 'irrigate', icon: '💧', title: 'Irrigation Recommended Today', subtitle: 'Soil moisture levels dropping', color: '#3B82F6', bgColor: '#EFF6FF' });
-    list.push({ id: 'harvest', icon: '🌾', title: 'Harvest Window Opens In 3 Days', subtitle: 'Prepare for harvesting activity', color: '#2D8A4E', bgColor: '#ECFDF5' });
-    list.push({ id: 'fertilizer', icon: '🧪', title: 'Fertilizer Application Due This Week', subtitle: 'Apply NPK to active crops', color: '#D4872F', bgColor: '#FFF8F0' });
+    list.push({ id: 'harvest', icon: '🌾', title: 'Harvest Window Opens In 3 Days', subtitle: 'Prepare for harvesting activity', color: '#22C55E', bgColor: '#ECFDF5' });
+    list.push({ id: 'fertilizer', icon: '🧪', title: 'Fertilizer Application Due This Week', subtitle: 'Apply NPK to active crops', color: '#F59E0B', bgColor: '#FFF8F0' });
     return list;
   }, [weather]);
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, { backgroundColor: colors.background }]}>
       <RNAnimated.View style={[styles.content, { opacity: fadeAnim, paddingTop: Math.max(insets.top, 12) }]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: insets.bottom + TAB_BAR_HEIGHT + spacing.lg }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchFarms(); }} tintColor="#6B705C" />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchFarms(); }} tintColor={colors.primary} />}
         >
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <Text style={styles.greeting}>Good {getGreeting()}</Text>
-              <Text style={styles.date}>{getFormattedDate()}</Text>
+              <Text style={[styles.greeting, { color: colors.text }]}>Good {getGreeting()}</Text>
+              <Text style={[styles.date, { color: colors.textSecondary }]}>{getFormattedDate()}</Text>
             </View>
             <View style={styles.headerRight}>
               <TouchableOpacity
-                style={styles.aiBtn}
+                style={[styles.aiBtn, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
                 onPress={() => navigation.navigate('AIHub')}
                 activeOpacity={0.8}
               >
                 <Ionicons name="sparkles" size={18} color="#FFFFFF" />
               </TouchableOpacity>
               <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
-                <Ionicons name="person-circle" size={38} color="#6B705C" />
+                <Ionicons name="person-circle" size={38} color={colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -188,7 +190,7 @@ function getGreeting() {
 }
 
 const styles = StyleSheet.create({
-  wrapper: { flex: 1, backgroundColor: '#F5F3EF' },
+  wrapper: { flex: 1 },
   content: { flex: 1, paddingHorizontal: spacing.md },
   header: {
     flexDirection: 'row',
@@ -198,17 +200,15 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   headerLeft: {},
-  greeting: { fontSize: 22, fontWeight: '700', color: '#1F2937', letterSpacing: -0.3 },
-  date: { fontSize: 12, color: '#6B7280', fontWeight: '500', marginTop: 2 },
+  greeting: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
+  date: { fontSize: 12, fontWeight: '500', marginTop: 2 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   aiBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#6B705C',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#6B705C',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

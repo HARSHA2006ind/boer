@@ -87,7 +87,7 @@ export default function CropRecommendationScreen({ navigation }: Props) {
     setLocation([farm.village, farm.district, farm.state].filter(Boolean).join(', '));
   }
 
-  const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32', '#8B7355', '#6B7280'];
+  const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32', '#8B7355', '#64748B'];
 
   return (
     <View style={styles.container}>
@@ -165,7 +165,7 @@ export default function CropRecommendationScreen({ navigation }: Props) {
           <View style={styles.resultsSection}>
             <Text style={styles.resultsTitle}>Recommended Crops</Text>
             {results.map((crop, i) => (
-              <View key={i} style={[styles.cropCard, { borderLeftColor: rankColors[i] || '#6B7280', borderLeftWidth: 4 }]}>
+              <View key={i} style={[styles.cropCard, { borderLeftColor: rankColors[i] || '#64748B', borderLeftWidth: 4 }]}>
                 <View style={styles.rankBadge}>
                   <Text style={styles.rankText}>{i + 1}</Text>
                 </View>

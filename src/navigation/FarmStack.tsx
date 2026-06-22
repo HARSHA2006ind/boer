@@ -13,9 +13,9 @@ export default function FarmStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerTintColor: '#2E7D32',
+        headerTintColor: '#14B8A6',
         headerStyle: { backgroundColor: '#FFFFFF' },
-        headerTitleStyle: { color: '#6B705C', fontWeight: '600' },
+        headerTitleStyle: { color: '#14B8A6', fontWeight: '600' },
       }}
     >
       <Stack.Screen name="FarmList" component={FarmListScreen} options={{ title: 'My Farms' }} />

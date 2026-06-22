@@ -128,7 +128,7 @@ export default function AppNavigator() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F5F3EF' },
+  root: { flex: 1, backgroundColor: '#F6F7FB' },
   banner: {
     position: 'absolute',
     top: 0,
@@ -141,6 +141,6 @@ const styles = StyleSheet.create({
     zIndex: 999,
     gap: 6,
   },
-  bannerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#C0392B' },
+  bannerDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' },
   bannerText: { fontSize: 12, fontWeight: '600' },
 });

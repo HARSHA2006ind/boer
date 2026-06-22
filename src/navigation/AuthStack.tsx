@@ -23,9 +23,9 @@ export default function AuthStack() {
           headerShown: true,
           headerTitle: 'Sign In',
           headerBackTitle: 'Back',
-          headerTintColor: '#2E7D32',
+          headerTintColor: '#14B8A6',
           headerStyle: { backgroundColor: '#FFFFFF' },
-          headerTitleStyle: { color: '#6B705C', fontWeight: '600' },
+          headerTitleStyle: { color: '#14B8A6', fontWeight: '600' },
         }}
       />
       <Stack.Screen
@@ -35,9 +35,9 @@ export default function AuthStack() {
           headerShown: true,
           headerTitle: 'Create Account',
           headerBackTitle: 'Back',
-          headerTintColor: '#2E7D32',
+          headerTintColor: '#14B8A6',
           headerStyle: { backgroundColor: '#FFFFFF' },
-          headerTitleStyle: { color: '#6B705C', fontWeight: '600' },
+          headerTitleStyle: { color: '#14B8A6', fontWeight: '600' },
         }}
       />
       <Stack.Screen
@@ -47,9 +47,9 @@ export default function AuthStack() {
           headerShown: true,
           headerTitle: 'Reset Password',
           headerBackTitle: 'Back',
-          headerTintColor: '#2E7D32',
+          headerTintColor: '#14B8A6',
           headerStyle: { backgroundColor: '#FFFFFF' },
-          headerTitleStyle: { color: '#6B705C', fontWeight: '600' },
+          headerTitleStyle: { color: '#14B8A6', fontWeight: '600' },
         }}
       />
     </Stack.Navigator>

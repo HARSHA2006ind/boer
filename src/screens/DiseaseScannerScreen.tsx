@@ -226,7 +226,7 @@ export default function DiseaseScannerScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F3EF' },
+  container: { flex: 1, backgroundColor: '#F6F7FB' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.secondary, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 17, fontWeight: '700', color: colors.text },

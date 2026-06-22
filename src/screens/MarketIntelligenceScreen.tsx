@@ -66,7 +66,7 @@ export default function MarketIntelligenceScreen({ navigation }: Props) {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={22} color="#1A1A1A" />
+          <Ionicons name="chevron-back" size={22} color="#0F172A" />
         </TouchableOpacity>
         <Text style={styles.title}>Market Intelligence</Text>
         <View style={styles.backBtn} />
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8E7E0', justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
   scroll: { padding: spacing.md, paddingBottom: spacing.xxl },
 
   sourceBanner: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.sm, flexWrap: 'wrap' },

@@ -24,7 +24,7 @@ function MarketPricesRow({ crops, onViewAll, onCropPress }: Props) {
     <Animated.View entering={FadeInUp.duration(500).delay(500)} style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="trending-up-outline" size={16} color="#6B705C" />
+          <Ionicons name="trending-up-outline" size={16} color="#14B8A6" />
           <Text style={styles.title}>Market Prices</Text>
         </View>
         {crops.length > 0 && (
@@ -48,8 +48,8 @@ function MarketPricesRow({ crops, onViewAll, onCropPress }: Props) {
                 <Text style={styles.cropName}>{crop.name}</Text>
                 <Text style={styles.cropPrice}>₹{crop.price}</Text>
                 <View style={[styles.trendBadge, { backgroundColor: crop.trend === 'up' ? '#ECFDF5' : '#FEF2F2' }]}>
-                  <Ionicons name={crop.trend === 'up' ? 'arrow-up' : 'arrow-down'} size={10} color={crop.trend === 'up' ? '#2D8A4E' : '#C0392B'} />
-                  <Text style={[styles.trendText, { color: crop.trend === 'up' ? '#2D8A4E' : '#C0392B' }]}>
+                  <Ionicons name={crop.trend === 'up' ? 'arrow-up' : 'arrow-down'} size={10} color={crop.trend === 'up' ? '#22C55E' : '#EF4444'} />
+                  <Text style={[styles.trendText, { color: crop.trend === 'up' ? '#22C55E' : '#EF4444' }]}>
                     {Math.abs(crop.change)}%
                   </Text>
                 </View>
@@ -59,7 +59,7 @@ function MarketPricesRow({ crops, onViewAll, onCropPress }: Props) {
         </Animated.ScrollView>
       ) : (
         <View style={styles.emptyState}>
-          <Ionicons name="trending-up-outline" size={24} color="#D1D5DB" />
+          <Ionicons name="trending-up-outline" size={24} color="#CBD5E1" />
           <Text style={styles.emptyText}>No data available</Text>
         </View>
       )}
@@ -89,12 +89,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: '#0F172A',
   },
   viewAllText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6B705C',
+    color: '#14B8A6',
   },
   scrollContent: {
     gap: spacing.sm,
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   },
   cropCard: {
     width: 110,
-    backgroundColor: '#F5F3EF',
+    backgroundColor: '#F6F7FB',
     borderRadius: radius.md,
     padding: spacing.sm,
     alignItems: 'center',
@@ -114,12 +114,12 @@ const styles = StyleSheet.create({
   cropName: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#1A1A1A',
+    color: '#0F172A',
   },
   cropPrice: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#6B705C',
+    color: '#14B8A6',
   },
   trendBadge: {
     flexDirection: 'row',
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   emptyState: { alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.sm },
-  emptyText: { fontSize: 13, color: '#D1D5DB', fontWeight: '600' },
+  emptyText: { fontSize: 13, color: '#CBD5E1', fontWeight: '600' },
 });
 
 export default memo(MarketPricesRow);

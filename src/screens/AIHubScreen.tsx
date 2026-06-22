@@ -17,28 +17,28 @@ const AI_FEATURES = [
     icon: 'chatbubbles-outline',
     title: 'Chat with AI',
     desc: 'Ask farming questions',
-    gradient: ['#6B705C', '#8A8F7A'] as [string, string],
+    gradient: ['#14B8A6', '#8A8F7A'] as [string, string],
   },
   {
     key: 'DiseaseScanner',
     icon: 'camera-outline',
     title: 'Disease Scanner',
     desc: 'Snap & identify diseases',
-    gradient: ['#A5A58D', '#8A8A7A'] as [string, string],
+    gradient: ['#64748B', '#8A8A7A'] as [string, string],
   },
   {
     key: 'CropRecommendation',
     icon: 'leaf-outline',
     title: 'Crop Recommendation',
     desc: 'Best crops for your farm',
-    gradient: ['#CB997E', '#B88A6A'] as [string, string],
+    gradient: ['#14B8A6', '#B88A6A'] as [string, string],
   },
   {
     key: 'IrrigationAdvisor',
     icon: 'water-outline',
     title: 'Irrigation Advisor',
     desc: 'Smart water scheduling',
-    gradient: ['#457B9D', '#3A6A8A'] as [string, string],
+    gradient: ['#3B82F6', '#3A6A8A'] as [string, string],
   },
   {
     key: 'FertilizerAdvisor',
@@ -52,14 +52,14 @@ const AI_FEATURES = [
     icon: 'shield-checkmark-outline',
     title: 'Schemes Assistant',
     desc: 'Find govt schemes',
-    gradient: ['#D97706', '#B86A00'] as [string, string],
+    gradient: ['#F59E0B', '#B86A00'] as [string, string],
   },
   {
     key: 'SmartAlerts',
     icon: 'notifications-outline',
     title: 'Smart Alerts',
     desc: 'AI-powered farm alerts',
-    gradient: ['#D62828', '#B02020'] as [string, string],
+    gradient: ['#EF4444', '#B02020'] as [string, string],
   },
   {
     key: 'MarketAdvisor',
@@ -77,7 +77,7 @@ export default function AIHubScreen({ navigation }: Props) {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="close" size={22} color="#1A1A1A" />
+          <Ionicons name="close" size={22} color="#0F172A" />
         </TouchableOpacity>
         <Text style={styles.title}>AI Hub</Text>
         <View style={styles.backBtn} />
@@ -119,7 +119,7 @@ export default function AIHubScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F3EF' },
+  container: { flex: 1, backgroundColor: '#F6F7FB' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -128,9 +128,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   backBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E8E7E0', justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
+  title: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
   scroll: { paddingBottom: spacing.xl },
-  subtitle: { fontSize: 13, color: '#6B7280', fontWeight: '500', paddingHorizontal: spacing.md, marginBottom: spacing.lg },
+  subtitle: { fontSize: 13, color: '#64748B', fontWeight: '500', paddingHorizontal: spacing.md, marginBottom: spacing.lg },
   grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.md, gap: spacing.md },
   card: { width: CARD_SIZE, height: CARD_SIZE * 0.9, borderRadius: radius.xl, overflow: 'hidden' },
   cardGradient: { flex: 1, borderRadius: radius.xl, padding: spacing.lg, justifyContent: 'space-between' },

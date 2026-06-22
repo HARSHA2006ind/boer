@@ -17,10 +17,10 @@ export interface HomeAlert {
 }
 
 const SEV_META: Record<string, { color: string; bg: string; icon: string }> = {
-  critical: { color: '#D62828', bg: '#FEE2E2', icon: 'alert-circle' },
-  high: { color: '#D97706', bg: '#FFF7ED', icon: 'warning' },
-  medium: { color: '#457B9D', bg: '#EFF6FF', icon: 'alert-outline' },
-  low: { color: '#6B7280', bg: '#F3F4F6', icon: 'information-circle-outline' },
+  critical: { color: '#EF4444', bg: '#FEE2E2', icon: 'alert-circle' },
+  high: { color: '#F59E0B', bg: '#FFF7ED', icon: 'warning' },
+  medium: { color: '#3B82F6', bg: '#EFF6FF', icon: 'alert-outline' },
+  low: { color: '#64748B', bg: '#F3F4F6', icon: 'information-circle-outline' },
 };
 
 interface Props {
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   alertLeft: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   alertMid: { flex: 1 },
   alertTitle: { fontSize: 13, fontWeight: '700' },
-  alertDesc: { fontSize: 11, color: '#6B7280', marginTop: 1 },
+  alertDesc: { fontSize: 11, color: '#64748B', marginTop: 1 },
   empty: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, justifyContent: 'center' },
   emptyIcon: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
   emptyText: { fontSize: 13, color: '#059669', fontWeight: '600' },

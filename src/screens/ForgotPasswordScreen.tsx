@@ -21,7 +21,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#1B3A1B', '#2E7D32', '#4A6B12']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+      <LinearGradient colors={['#0D9488', '#14B8A6', '#0D9488']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
       <View style={styles.overlay}>
         <View style={styles.glassCard}>
           <Text style={styles.title}>Reset Password</Text>

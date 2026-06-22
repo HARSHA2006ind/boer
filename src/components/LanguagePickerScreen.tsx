@@ -39,12 +39,12 @@ export default function LanguagePickerScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 32 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 28, width: '100%', maxWidth: 360, alignItems: 'center' },
-  title: { fontSize: 22, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.3, marginBottom: 4 },
-  subtitle: { fontSize: 14, color: '#6B7280', fontWeight: '500', marginBottom: 24 },
+  title: { fontSize: 22, fontWeight: '800', color: '#0F172A', letterSpacing: -0.3, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: '#64748B', fontWeight: '500', marginBottom: 24 },
   list: { width: '100%', gap: 8 },
-  langOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, backgroundColor: '#F5F3EF', borderRadius: 12 },
-  langNative: { fontSize: 18, fontWeight: '700', color: '#1A1A1A' },
-  langName: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  langOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16, backgroundColor: '#F6F7FB', borderRadius: 12 },
+  langNative: { fontSize: 18, fontWeight: '700', color: '#0F172A' },
+  langName: { fontSize: 13, color: '#64748B', fontWeight: '500' },
   skipBtn: { marginTop: 20, paddingVertical: 8 },
-  skipText: { fontSize: 14, color: '#9CA3AF', fontWeight: '600' },
+  skipText: { fontSize: 14, color: '#94A3B8', fontWeight: '600' },
 });

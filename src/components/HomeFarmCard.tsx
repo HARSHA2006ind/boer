@@ -20,12 +20,12 @@ function HomeFarmCard({ farms, onFarmPress, onAddFarm }: Props) {
       <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.container}>
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Ionicons name="leaf-outline" size={16} color="#6B705C" />
+            <Ionicons name="leaf-outline" size={16} color="#14B8A6" />
             <Text style={styles.title}>My Farms</Text>
           </View>
         </View>
         <TouchableOpacity onPress={onAddFarm} style={styles.addCard} activeOpacity={0.7}>
-          <Ionicons name="add-circle-outline" size={32} color="#6B705C" />
+          <Ionicons name="add-circle-outline" size={32} color="#14B8A6" />
           <Text style={styles.addText}>Add Your First Farm</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -36,11 +36,11 @@ function HomeFarmCard({ farms, onFarmPress, onAddFarm }: Props) {
     <Animated.View entering={FadeInDown.duration(500).delay(400)} style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Ionicons name="leaf-outline" size={16} color="#6B705C" />
-          <Text style={styles.title}>My Farms</Text>
-        </View>
-        <TouchableOpacity onPress={onAddFarm}>
-          <Ionicons name="add-circle" size={22} color="#6B705C" />
+            <Ionicons name="leaf-outline" size={16} color="#14B8A6" />
+            <Text style={styles.title}>My Farms</Text>
+          </View>
+          <TouchableOpacity onPress={onAddFarm}>
+            <Ionicons name="add-circle" size={22} color="#14B8A6" />
         </TouchableOpacity>
       </View>
       <Animated.ScrollView
@@ -51,7 +51,7 @@ function HomeFarmCard({ farms, onFarmPress, onAddFarm }: Props) {
         decelerationRate="fast"
       >
         {farms.map((farm, i) => {
-          const colors: [string, string] = i % 3 === 0 ? ['#6B705C', '#4A4F3E'] : i % 3 === 1 ? ['#A5A58D', '#7A7A6A'] : ['#CB997E', '#A87A6A'];
+          const colors: [string, string] = i % 3 === 0 ? ['#14B8A6', '#0D9488'] : i % 3 === 1 ? ['#64748B', '#7A7A6A'] : ['#14B8A6', '#A87A6A'];
           return (
             <TouchableOpacity key={farm.id} onPress={() => onFarmPress(farm.id)} activeOpacity={0.95}>
               <Animated.View entering={FadeInDown.duration(400).delay(450 + i * 100)} style={styles.farmCard}>
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: '#0F172A',
   },
   scrollContent: {
     gap: spacing.sm,
@@ -156,14 +156,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
     gap: spacing.sm,
     borderWidth: 1.5,
-    borderColor: '#E5E0D5',
+    borderColor: '#E2E8F0',
     borderRadius: radius.lg,
     borderStyle: 'dashed',
   },
   addText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B705C',
+    color: '#14B8A6',
   },
 });
 

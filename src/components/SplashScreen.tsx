@@ -9,21 +9,21 @@ interface Props {
 export default function SplashScreen({ onReady }: Props) {
   const logoOpacity = useRef(new RNA.Value(0)).current;
   const subtitleOpacity = useRef(new RNA.Value(0)).current;
-  const scale = useRef(new RNA.Value(0.92)).current;
+  const scale = useRef(new RNA.Value(0.95)).current;
 
   useEffect(() => {
     RNA.parallel([
-      RNA.timing(logoOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
-      RNA.spring(scale, { toValue: 1, damping: 18, stiffness: 180, mass: 0.8, useNativeDriver: true }),
+      RNA.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      RNA.timing(scale, { toValue: 1, duration: 500, useNativeDriver: true }),
     ]).start();
 
     const subTimer = setTimeout(() => {
-      RNA.timing(subtitleOpacity, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-    }, 400);
+      RNA.timing(subtitleOpacity, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+    }, 300);
 
     const readyTimer = setTimeout(() => {
       onReady?.();
-    }, 1200);
+    }, 1000);
 
     return () => { clearTimeout(subTimer); clearTimeout(readyTimer); };
   }, []);
@@ -31,7 +31,7 @@ export default function SplashScreen({ onReady }: Props) {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#4A4F3E', '#6B705C', '#4A4F3E']}
+        colors={['#0D9488', '#14B8A6', '#0D9488']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -54,6 +54,6 @@ const styles = StyleSheet.create({
   content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   logoWrap: { alignItems: 'center', marginBottom: 12 },
   logoText: { fontSize: 52, fontWeight: '800', color: '#FFFFFF', letterSpacing: -2 },
-  logoUnderline: { width: 40, height: 3, borderRadius: 2, backgroundColor: '#CB997E', marginTop: 6 },
+  logoUnderline: { width: 40, height: 3, borderRadius: 2, backgroundColor: '#FFFFFF', marginTop: 6, opacity: 0.6 },
   subtitle: { fontSize: 15, fontWeight: '500', color: 'rgba(255,255,255,0.7)', letterSpacing: 0.5 },
 });

@@ -92,7 +92,7 @@ export default function GovernmentSchemesScreen({ navigation }: Props) {
                 <Text style={styles.schemeName}>{scheme.name}</Text>
                 <Text style={styles.schemeDesc}>{scheme.description}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+              <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
             </View>
             <View style={styles.schemeFooter}>
               <View style={styles.schemeTag}>

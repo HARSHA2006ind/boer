@@ -12,10 +12,10 @@ interface Props { navigation: any }
 
 const SETTINGS = [
   { icon: 'person-outline', label: 'Edit Profile', color: '#3B82F6', screen: 'ProfileEdit' },
-  { icon: 'settings-outline', label: 'Settings', color: '#6B7280', screen: 'Settings' },
+  { icon: 'settings-outline', label: 'Settings', color: '#64748B', screen: 'Settings' },
   { icon: 'notifications-outline', label: 'Notifications', color: '#F59E0B' },
   { icon: 'language-outline', label: 'Language', color: colors.primary, screen: 'Settings' },
-  { icon: 'lock-closed-outline', label: 'Privacy', color: '#6B7280' },
+  { icon: 'lock-closed-outline', label: 'Privacy', color: '#64748B' },
   { icon: 'document-text-outline', label: 'Terms & Conditions', color: '#8B5CF6' },
   { icon: 'help-circle-outline', label: 'Support', color: '#3BA55D' },
   { icon: 'chatbubble-outline', label: 'Feedback', color: '#EC4899' },
@@ -80,7 +80,7 @@ export default function ProfileScreen({ navigation }: Props) {
                 <Ionicons name={item.icon as any} size={20} color={item.color} />
               </View>
               <Text style={styles.rowLabel}>{item.label}</Text>
-              <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+              <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
             </TouchableOpacity>
           ))}
         </View>
